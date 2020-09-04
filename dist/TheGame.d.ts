@@ -1,0 +1,43 @@
+import * as BABYLON from 'babylonjs';
+import * as Materials from 'babylonjs-materials';
+import * as GUI from 'babylonjs-gui';
+import { BaseGameGUI, CardGame, Player, GameState, VotingUI } from './CardGame';
+declare class TheGameGUI extends BaseGameGUI {
+    protected EndRoundBtn: GUI.Button;
+    protected GameStateText: GUI.TextBlock;
+    protected CardsLeftText: GUI.TextBlock;
+    AVotingUI: VotingUI;
+    GameID: String;
+    Socket: WebSocket;
+    OnNextRoundClick: () => void;
+    constructor(scene: BABYLON.Scene);
+    UpdateCardCounter(count: number): void;
+    ShowGameState(gs: GameState): void;
+    ShowVotePlayerStart(): void;
+    HideGameState(): void;
+    protected OnEndLocalRound(): void;
+    ShowNextRoundBtn(): void;
+    SetEnabledNextRoundBtn(val: boolean): void;
+    HideNextRoundBtn(): void;
+}
+declare class TheGame extends CardGame {
+    name: string;
+    protected CardMaterails: Map<number, Materials.MixMaterial>;
+    protected GUI: TheGameGUI;
+    constructor(port: number);
+    CheckGameState(): GameState;
+    StartLocalPlayersRound(): void;
+    StartGame(): void;
+    ShowVotePlayerStartGUI(): void;
+    CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
+    protected OnEndLocalRound(): void;
+    protected CreateMaterialForCard(nb: number): void;
+    Tick(): void;
+    AddPlayer(id: String, isLocal: Boolean, player?: Player): void;
+    OnServerResponse(result: any): void;
+    OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
+    MinPlayers(): number;
+    MaxPlayers(): number;
+}
+export { TheGame };
+//# sourceMappingURL=TheGame.d.ts.map

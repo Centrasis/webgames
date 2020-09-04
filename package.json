@@ -1,0 +1,44 @@
+{
+  "name": "webgames",
+  "version": "0.3.1",
+  "description": "Base Lib for the SVE API",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "url": "git+https://github.com/ftl999/webgames.git",
+    "type": "git"
+  },
+  "dependencies": {
+    "@types/node": "^14.6.0",
+    "@types/ws": "^7.2.6",
+    "babylonjs": "^4.1.0",
+    "babylonjs-gui": "^4.1.0",
+    "babylonjs-materials": "^4.1.0",
+    "prop-types": "^15.7.2",
+    "querystring": "^0.2.0",
+    "typescript": "^3.9.7",
+    "ws": "^7.3.1"
+  },
+  "scripts": {
+    "tsc": "tsc -b && tsc -m es6 --outDir dist-esm",
+    "webpack": "npm run tsc && node build/build.js",
+    "build": "npm run tsc",
+    "prepare": "npm run tsc"
+  },
+  "author": "ftl999",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ftl999/sveBaseLib/issues"
+  },
+  "homepage": "https://github.com/ftl999/sveBaseLib#readme",
+  "devDependencies": {
+    "awesome-typescript-loader": "^5.2.1",
+    "chalk": "^4.1.0",
+    "terser-webpack-plugin": "^4.1.0",
+    "typescript": "^3.9.7",
+    "webpack": "^4.44.1",
+    "rimraf": "^3.0.2",
+    "webpack-cli": "^3.3.12",
+    "ora": "^5.0.0"
+  }
+}
