@@ -2,6 +2,7 @@ import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import BaseGame from './BaseGame';
+import { SVEAccount, SVEGame, GameState, GameInfo, GameRequest } from 'svebaselib';
 export declare enum PlayerGamePhase {
     Spectating = 0,
     SelectingCard = 1,
@@ -46,8 +47,7 @@ export declare class CardStack {
     protected type: StackType;
     protected position: BABYLON.Vector3;
     protected id: String;
-    Socket: WebSocket;
-    GameID: String;
+    Game: SVEGame;
     protected card_distance: number;
     constructor(dir: StackDirection, type: StackType, id: String);
     GetID(): String;
@@ -73,8 +73,7 @@ export declare class CardStack {
 export declare abstract class BaseCardDeck {
     protected stacks: CardStack[];
     protected position: BABYLON.Vector3;
-    Socket: WebSocket;
-    GameID: String;
+    Game: SVEGame;
     abstract GetNumberOfCardsInDeck(): number;
     setPosition(loc: BABYLON.Vector3): void;
     drawCard(stackID: String): Card;
@@ -85,19 +84,17 @@ export declare abstract class BaseCardDeck {
     GetStackFromPick(pick: BABYLON.PickingInfo): CardStack;
     abstract GiveCardByNameTo(card_name: String, player: Player): void;
 }
-export declare class Player {
-    protected id: String;
+export declare class Player extends SVEAccount {
     protected cards: Card[];
     protected maxCardCount: number;
     protected cardOrigin: BABYLON.Vector3;
     protected phase: PlayerGamePhase;
     protected bHasTurn: Boolean;
-    Socket: WebSocket;
-    GameID: String;
+    Game: SVEGame;
     protected isLocal: Boolean;
     protected gameState: GameState;
     camera: BABYLON.FreeCamera;
-    constructor(id: String, maxCardCount: number, isLocal: Boolean);
+    constructor(decoratee: SVEAccount, maxCardCount: number, isLocal: Boolean);
     GetPhase(): PlayerGamePhase;
     SetPhase(p: PlayerGamePhase): void;
     commitToServer(): void;
@@ -123,11 +120,6 @@ export declare class Player {
     IsLocalPlayer(): Boolean;
     SetGameState(gs: GameState): void;
     GetGameState(): GameState;
-}
-export declare enum GameState {
-    Undetermined = 0,
-    Won = 1,
-    Lost = 2
 }
 export declare class PlayerListUI {
     protected GUI: GUI.AdvancedDynamicTexture;
@@ -167,11 +159,9 @@ export declare abstract class CardGame extends BaseGame {
     protected gameID: String;
     protected bIsHosting: Boolean;
     protected highlightLayer: BABYLON.HighlightLayer;
-    protected Socket: WebSocket;
-    protected port: number;
     protected GUI: BaseGameGUI;
     protected enableZMovement: boolean;
-    constructor(port: number);
+    constructor(info: GameInfo);
     abstract CheckGameState(): GameState;
     StartLocalPlayersRound(): void;
     SetInitialCardCount(cardsCount: number): void;
@@ -182,13 +172,15 @@ export declare abstract class CardGame extends BaseGame {
     protected OnEndLocalRound(): void;
     GiveUp(): void;
     InvokeNextPlayerRound(): void;
-    AddPlayer(id: String, isLocal: Boolean, player?: Player): void;
+    AddPlayer(user: SVEAccount, isLocal: Boolean, player?: Player): void;
+    onJoined(): void;
+    onRequest(req: GameRequest): void;
+    onEnd(): void;
     UpdateGameDirection(dir: number): void;
     NotifyPlayer(player: Player, notification: String): void;
     GetLocalPlayDirection(): number;
     GetLocalPlayerID(): String;
     OnServerResponse(result: any): void;
-    SetGameID(id: String, doHost: Boolean): Boolean;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     EndGame(): void;
     GetPlayersCount(): number;

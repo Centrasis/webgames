@@ -2,11 +2,12 @@ import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { GameRejectReason} from './BaseGame';
-import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, GameState, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
+import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
 import { isUndefined } from 'util';
 import { string } from 'prop-types';
 import { MixMaterial } from 'babylonjs-materials';
 import { CrossBlock } from 'babylonjs';
+import { SVEGame, GameState, GameInfo, SVEAccount } from 'svebaselib';
 
 enum CardType {
     Number = "Number",
@@ -326,8 +327,7 @@ class UNOCardDeck extends BaseCardDeck {
     }
 
     public revealFirstCard() {
-        this.stacks[1].Socket = this.Socket;
-        this.stacks[1].GameID = this.GameID;
+        this.stacks[1].Game = this.Game;
         this.stacks[1].addCard(this.stacks[0].DrawCard(), null);
 
         this.setPosition(this.position);
@@ -383,7 +383,7 @@ class UNOGUI extends BaseGameGUI {
     protected GameStateText: GUI.TextBlock;
     public AVotingUI: VotingUI;
     public GameID: String;
-    public Socket: WebSocket;
+    public Game: SVEGame;
     protected EndRoundBtn: GUI.Button;
     public OnEndRoundClick: () => void;
 
@@ -434,14 +434,18 @@ class UNOGUI extends BaseGameGUI {
         var self = this;
         this.AVotingUI = new VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], (val: String) => {
             self.AVotingUI.removeAll();
-            
-            self.Socket.send(JSON.stringify({
-                type: "vote",
-                id: self.GameID,
-                voteType: "SelfOnly",
-                voteID: "ColorWish",
-                value: val
-            }));
+
+            self.Game.sendGameRequest({
+                action: { 
+                    field: "!vote",
+                    value: {
+                        voteType: "SelfOnly",
+                        voteID: "ColorWish",
+                        value: val
+                    }
+                },
+                invoker: String((<CardGame>self.Game).GetLocalPlayerID())
+            });
 
             self.AVotingUI = null;
             ug.OnEndLocalRound();
@@ -454,14 +458,15 @@ class UNOGUI extends BaseGameGUI {
 }
 
 class UNO extends CardGame { 
-    public name = "UNO";
+    public gameType = "UNO";
     protected isSetup = false;
     protected GUI: UNOGUI;
     protected bIsSuspended: Boolean;
 
-    constructor (port: number) {
-        super(port);
+    constructor (info: GameInfo) {
+        super(info);
         this.bIsSuspended = false;
+        this.gameType = "UNO";
     }
 
     public CheckGameState(): GameState {
@@ -506,14 +511,12 @@ class UNO extends CardGame {
 
     public StartGame(): void {
         if (this.bIsHosting) {
-            this.Deck.Socket = this.Socket;
-            this.Deck.GameID = this.gameID;
+            this.Deck.Game = this;
             (<UNOCardDeck>this.Deck).revealFirstCard();
 
             this.SetInitialCardCount(7);
             this.players.forEach(p => {
-                p.Socket = this.Socket;
-                p.GameID = this.gameID;
+                p.Game = this;
                 p.drawNumberOfCards((<UNOCardDeck>this.Deck).GetDrawStack(), 7);
             });
         }
@@ -527,11 +530,13 @@ class UNO extends CardGame {
         }
         else {
             if (this.IsHostInstance()) {
-                this.Socket.send(JSON.stringify({
-                    type: "setTurn",
-                    player: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
-                    id: this.gameID
-                }));
+                this.sendGameRequest({
+                    action: {
+                        field: "!setTurn",
+                        value: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
+                    },
+                    invoker: String(this.GetLocalPlayerID())
+                });
             }
         }
     }
@@ -583,17 +588,16 @@ class UNO extends CardGame {
         
     }
 
-    public AddPlayer(id: String, isLocal: Boolean, player: Player = null): void {
+    public AddPlayer(id: SVEAccount, isLocal: Boolean, player: Player = null): void {
         super.AddPlayer(id, isLocal);
 
         if(isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
 
-        this.Deck.GameID = this.gameID;
-        this.Deck.Socket = this.Socket;
+        this.Deck.Game = this;
         this.GUI.GameID = this.gameID;
-        this.GUI.Socket = this.Socket;
+        this.GUI.Game = this;
     }
 
     public OnServerResponse(result: any): void {
@@ -682,8 +686,7 @@ class UNO extends CardGame {
             if(pickInfo != null && this.localPlayer.GetPhase() != PlayerGamePhase.Spectating) {
                 let stack = this.Deck.GetStackFromPick(pickInfo);
                 if (stack != null) {
-                    stack.Socket = this.Socket;
-                    stack.GameID = this.gameID;
+                    stack.Game = this;
                     if ((<UnoCard>this.localPlayer.GetSelectedCard()).GetColor() == CardColor.Black) {
                         stack.PlayCardOnStack(this.localPlayer);
                     } else {
@@ -699,8 +702,7 @@ class UNO extends CardGame {
         if (gameState != GameState.Undetermined) {
             this.GUI.ShowGameState(gameState); 
 
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
             this.localPlayer.SetGameState(gameState);
 
             this.EndGame();

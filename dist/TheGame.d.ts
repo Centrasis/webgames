@@ -1,14 +1,15 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import { BaseGameGUI, CardGame, Player, GameState, VotingUI } from './CardGame';
+import { BaseGameGUI, CardGame, Player, VotingUI } from './CardGame';
+import { SVEGame, GameState, GameInfo, SVEAccount } from 'svebaselib';
 declare class TheGameGUI extends BaseGameGUI {
     protected EndRoundBtn: GUI.Button;
     protected GameStateText: GUI.TextBlock;
     protected CardsLeftText: GUI.TextBlock;
     AVotingUI: VotingUI;
     GameID: String;
-    Socket: WebSocket;
+    Game: SVEGame;
     OnNextRoundClick: () => void;
     constructor(scene: BABYLON.Scene);
     UpdateCardCounter(count: number): void;
@@ -21,10 +22,10 @@ declare class TheGameGUI extends BaseGameGUI {
     HideNextRoundBtn(): void;
 }
 declare class TheGame extends CardGame {
-    name: string;
+    gameType: string;
     protected CardMaterails: Map<number, Materials.MixMaterial>;
     protected GUI: TheGameGUI;
-    constructor(port: number);
+    constructor(info: GameInfo);
     CheckGameState(): GameState;
     StartLocalPlayersRound(): void;
     StartGame(): void;
@@ -33,7 +34,7 @@ declare class TheGame extends CardGame {
     protected OnEndLocalRound(): void;
     protected CreateMaterialForCard(nb: number): void;
     Tick(): void;
-    AddPlayer(id: String, isLocal: Boolean, player?: Player): void;
+    AddPlayer(id: SVEAccount, isLocal: Boolean, player?: Player): void;
     OnServerResponse(result: any): void;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     MinPlayers(): number;

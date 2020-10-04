@@ -2,8 +2,9 @@ import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { GameRejectReason} from './BaseGame';
-import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, GameState, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
+import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
 import { isUndefined } from 'util';
+import { SVEGame, GameState, GameInfo, SVEAccount } from 'svebaselib';
 
 class TheGameCardDeck extends BaseCardDeck {
 
@@ -117,7 +118,7 @@ class TheGameGUI extends BaseGameGUI {
     protected CardsLeftText: GUI.TextBlock;
     public AVotingUI: VotingUI;
     public GameID: String;
-    public Socket: WebSocket;
+    public Game: SVEGame;
     public OnNextRoundClick: () => void;
 
     constructor(scene: BABYLON.Scene) {
@@ -165,13 +166,18 @@ class TheGameGUI extends BaseGameGUI {
         var self = this;
         this.AVotingUI = new VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), (val: String) => {
             self.AVotingUI.removeAll();
-            
-            self.Socket.send(JSON.stringify({
-                type: "vote",
-                id: self.GameID,
-                voteID: "PlayerStart",
-                value: val
-            }));
+
+            self.Game.sendGameRequest({
+                action: { 
+                    field: "!vote",
+                    value: {
+                        voteType: "vote",
+                        voteID: "PlayerStart",
+                        value: val
+                    }
+                },
+                invoker: String((<CardGame>self.Game).GetLocalPlayerID())
+            });
 
             self.AVotingUI = null;
         });
@@ -200,12 +206,13 @@ class TheGameGUI extends BaseGameGUI {
 }
 
 class TheGame extends CardGame { 
-    public name = "TheGame";
+    public gameType = "TheGame";
     protected CardMaterails: Map<number, Materials.MixMaterial>;
     protected GUI: TheGameGUI;
 
-    constructor (port: number) {
-        super(port);
+    constructor (info: GameInfo) {
+        super(info);
+        this.gameType = "TheGame";
     }
 
     public CheckGameState(): GameState {
@@ -281,7 +288,7 @@ class TheGame extends CardGame {
 
     public ShowVotePlayerStartGUI() {
         console.log("Vote for the player to start.");
-        this.GUI.Socket = this.Socket;
+        this.GUI.Game = this;
         this.GUI.GameID = this.gameID;
         this.GUI.ShowVotePlayerStart();
     }
@@ -346,17 +353,16 @@ class TheGame extends CardGame {
         
     }
 
-    public AddPlayer(id: String, isLocal: Boolean, player: Player = null): void {
+    public AddPlayer(id: SVEAccount, isLocal: Boolean, player: Player = null): void {
         super.AddPlayer(id, isLocal);
 
         if(isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
 
-        this.Deck.GameID = this.gameID;
-        this.Deck.Socket = this.Socket;
+        this.Deck.Game = this;
         this.GUI.GameID = this.gameID;
-        this.GUI.Socket = this.Socket;
+        this.GUI.Game = this;
     }
 
     public OnServerResponse(result: any): void {
@@ -366,11 +372,14 @@ class TheGame extends CardGame {
             if (this.bIsHosting) {
                 if (result.voteID == "PlayerStart") {
                     console.log("Got voting result for player start: " + result.value);
-                    this.Socket.send(JSON.stringify({
-                        type: "setTurn",
-                        player: result.value,
-                        id: this.gameID
-                    }));
+
+                    this.sendGameRequest({
+                        action: {
+                            field: "!setTurn",
+                            value: result.value,
+                        },
+                        invoker: String(this.GetLocalPlayerID())
+                    });
                 }
             }
             return;
@@ -424,8 +433,7 @@ class TheGame extends CardGame {
             let stack = this.Deck.GetStackFromPick(pickInfo);
             if (stack != null) {
             {
-                stack.Socket = this.Socket;
-                stack.GameID = this.gameID;
+                stack.Game = this;
                 stack.PlayCardOnStack(this.localPlayer);
             }
             }
@@ -439,8 +447,7 @@ class TheGame extends CardGame {
         if (gameState != GameState.Undetermined) {
             this.GUI.ShowGameState(gameState); 
 
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
             this.localPlayer.SetGameState(gameState);
 
             this.EndGame();

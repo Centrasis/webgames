@@ -3,6 +3,7 @@ import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import BaseGame, {GameRejectReason} from './BaseGame';
 import { isUndefined } from 'util';
+import { SessionUserInitializer, SVEAccount, SVEGame, GameState, TargetType, SetDataRequest, ActionTarget, GameInfo, GameRequest } from 'svebaselib';
 
 export enum PlayerGamePhase {
     Spectating,
@@ -125,8 +126,7 @@ export class CardStack {
     protected type: StackType; 
     protected position: BABYLON.Vector3;
     protected id: String;
-    public Socket: WebSocket;
-    public GameID: String;
+    public Game: SVEGame;
     protected card_distance: number;
 
     constructor(dir: StackDirection, type: StackType, id: String) {
@@ -227,16 +227,20 @@ export class CardStack {
 
     /** Does replicate */
     public addCard(card: Card, previousOwner: Player, shouldReveal: Boolean = true): void {
-        if (!isUndefined(this.Socket)) {
-            this.Socket.send(JSON.stringify({
-                type: "playCard",
-                id: this.GameID,
-                card: card.GetMesh().name,
-                stack: this.GetID(),
-                player: (previousOwner == null) ? "" : previousOwner.GetID(),
-                revealed: shouldReveal
-            }));
-        }
+        this.Game.sendGameRequest({
+            action: {
+                field: "!playCard",
+                value: { 
+                    card: card.GetMesh().name,
+                    revealed: shouldReveal
+                },
+            },
+            invoker: (previousOwner == null) ? "" : previousOwner.getName(),
+            target: {
+                type: TargetType.Entity,
+                id: String(this.GetID())
+            }
+        });
 
         this.addCardLocal(card, shouldReveal);
     }
@@ -300,8 +304,7 @@ export class CardStack {
 export abstract class BaseCardDeck {
     protected stacks: CardStack[];
     protected position: BABYLON.Vector3;
-    public Socket: WebSocket;
-    public GameID: String;
+    public Game: SVEGame;
 
     public abstract GetNumberOfCardsInDeck(): number;
 
@@ -340,8 +343,7 @@ export abstract class BaseCardDeck {
             return;
         }
 
-        stack.Socket = this.Socket;
-        stack.GameID = this.GameID;
+        stack.Game = this.Game;
         stack.PlayCardOnStack(player);
     }
 
@@ -358,23 +360,21 @@ export abstract class BaseCardDeck {
     public abstract GiveCardByNameTo(card_name: String, player: Player): void;
 }
 
-export class Player {
-    protected id: String;
+export class Player extends SVEAccount {
     protected cards: Card[];
     protected maxCardCount: number;
     protected cardOrigin: BABYLON.Vector3;
     protected phase: PlayerGamePhase;
     protected bHasTurn: Boolean;
-    public Socket: WebSocket;
-    public GameID: String;
+    public Game: SVEGame;
     protected isLocal: Boolean;
     protected gameState: GameState;
     public camera: BABYLON.FreeCamera;
 
-    constructor(id: String, maxCardCount: number, isLocal: Boolean) {
+    constructor(decoratee: SVEAccount, maxCardCount: number, isLocal: Boolean) {
+        super(decoratee.getInitializer(), (u) => {});
         this.phase = PlayerGamePhase.Spectating;
         this.isLocal = isLocal;
-        this.id = id;
         this.maxCardCount = maxCardCount;
         this.cards = [];
         this.cardOrigin = new BABYLON.Vector3(0, 1, -6);
@@ -389,13 +389,17 @@ export class Player {
     }
 
     public commitToServer(): void {
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "maxCardCount",
-            value: this.maxCardCount
-        }));
+        this.Game.sendGameRequest({
+            action: {
+                field: "maxCardCount",
+                value: this.maxCardCount
+            },
+            invoker: this.getName(),
+            target: {
+                type: TargetType.Player,
+                id: this.getName()
+            }
+        });
     }
 
     /** No replication */
@@ -409,7 +413,7 @@ export class Player {
     }
 
     public GetID(): String {
-        return this.id;
+        return this.name;
     }
 
     public SetMaxCardCount(count: number): void {
@@ -530,12 +534,17 @@ export class Player {
     public AddCard(card: Card): void {
         this.AddCardLocal(card);
 
-        this.Socket.send(JSON.stringify({
-            type: "drawCard",
-            id: this.GameID,
-            player: this.GetID(),
-            card: card.GetMesh().name
-        }));
+        this.Game.sendGameRequest({
+            action: {
+                field: "!drawCard",
+                value: card.GetMesh().name
+            },
+            invoker: this.getName(),
+            target: {
+                type: TargetType.Player,
+                id: this.getName()
+            }
+        });
     }
 
     public AddCardLocal(card: Card): void {
@@ -554,12 +563,17 @@ export class Player {
         this.gameState = gs;
 
         if (gs != GameState.Undetermined) {
-            this.Socket.send(JSON.stringify({
-                type: "gameState",
-                id: this.GameID,
-                player: this.GetID(),
-                value: (gs == GameState.Won) ? "won" : "lost",
-            }));
+            this.Game.sendGameRequest({
+                action: {
+                    field: "gameState",
+                    value: gs
+                },
+                invoker: this.getName(),
+                target: {
+                    type: TargetType.Game,
+                    id: ""
+                }
+            });
         }
     }
 
@@ -568,11 +582,7 @@ export class Player {
     }
 }
 
-export enum GameState {
-    Undetermined,
-    Won,
-    Lost
-}
+
 
 export class PlayerListUI {
     protected GUI: GUI.AdvancedDynamicTexture;
@@ -712,20 +722,16 @@ export abstract class CardGame extends BaseGame {
     protected gameID: String;
     protected bIsHosting: Boolean;
     protected highlightLayer: BABYLON.HighlightLayer;
-    protected Socket: WebSocket;
-    protected port: number;
     protected GUI: BaseGameGUI;
     protected enableZMovement = false;
 
-    constructor (port: number) {
-        super();
+    constructor (info: GameInfo) {
+        super(info);
         this.players = [];
         this.playDirection = 1;
         this.bIsRunning = false;
         this.bIsHosting = false;
-        this.port = port;
         this.localPlayer = null;
-        this.Socket = null;
         this.Deck = null;
         this.GUI = null;
     }
@@ -744,8 +750,7 @@ export abstract class CardGame extends BaseGame {
     public SetInitialCardCount(cardsCount: number): void {
         this.players.forEach(player => {
             player.SetMaxCardCount(cardsCount);
-            player.Socket = this.Socket;
-            player.GameID = this.gameID;
+            player.Game = this;
             player.commitToServer();
         });
     }
@@ -758,10 +763,14 @@ export abstract class CardGame extends BaseGame {
         this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
 
         if (this.bIsHosting) {
-            this.Socket.send(JSON.stringify({
-                type: "startGame",
-                id: this.gameID
-            }))
+            this.sendGameRequest({
+                action: "!startGame",
+                invoker: this.localPlayer.getName(),
+                target: {
+                    type: TargetType.Game,
+                    id: ""
+                }
+            })
         }
     }
 
@@ -936,96 +945,102 @@ export abstract class CardGame extends BaseGame {
     }
 
     public GiveUp(): void {
-        this.Socket.send(JSON.stringify({
-            type: "gameState",
-            id: this.gameID,
-            value: "lost"
-        }));
+        this.sendGameRequest({
+            action: {
+                field: "gameState",
+                value: GameState.Lost
+            },
+            invoker: String(this.GetLocalPlayerID()),
+            target: {
+                id: "",
+                type: TargetType.Game
+            }
+        });
 
         this.EndGame();
     }
 
     public InvokeNextPlayerRound() {
         console.log("Invoke next round");
-        this.Socket.send(JSON.stringify({
-            type: "nextTurn",
-            id: this.gameID,
-            playDirection: this.playDirection,
-            player: this.localPlayer.GetID()
-        }));
+        this.sendGameRequest({
+            action: { 
+                field: "!nextTurn",
+                value: this.playDirection
+            },
+            invoker: this.localPlayer.getName(),
+            target: {
+                type: TargetType.Game,
+                id: ""
+            }
+        });
     }
 
-    public AddPlayer(id: String, isLocal: Boolean, player: Player = null): void {
+    public AddPlayer(user: SVEAccount, isLocal: Boolean, player: Player = null): void {
         if (isLocal) {
-            console.log("On add new local player: " + id);
+            console.log("On add new local player: " + user.getName());
         }
         else {
-            console.log("On add new remote player: " + id);
+            console.log("On add new remote player: " + user.getName());
         }
         if (player == null)
-            player = new Player(id, 6, isLocal);
+            player = new Player(user, 6, isLocal);
 
         this.GUI.PlayerList.AddPlayer(player);
 
         if (isLocal) {
             this.localPlayer = player;
             this.localPlayer.camera = this.camera;
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
         }
         this.players.push(player);
 
-        if (isLocal) {
-            let str = window.location.hostname;
-            this.Socket = new WebSocket("wss://" + str + ":" + this.port + "/" + this.name);
-
-            var self = this;
-
-            this.Socket.onopen = function() {
-                self.Socket.send(JSON.stringify({
-                    type: "addPlayer",
-                    name: player.GetID(),
-                    id: self.gameID
-                }));    
-            };
-
-            this.Socket.onmessage = function(e) {
-                let result = JSON.parse(e.data);
-
-                self.OnServerResponse(result);
-            };
-
-            this.Socket.onclose = function(e) {
-                console.log("Socket closed reason: " + e.reason);
-                self.bIsRunning = false;
-                self.OnSelect(null, null);
-            };
-        }
-        player.Socket = this.Socket;
-        player.GameID = this.gameID;
+        player.Game = this;
 
         this.OnNewPlayer();
     }
 
+    public onJoined() {
+        console.log("Card game joined!");
+    }
+
+    public onRequest(req: GameRequest) {
+        this.OnServerResponse(req);
+    }
+
+    public onEnd() {
+        console.log("Socket closed!");
+        this.bIsRunning = false;
+        this.OnSelect(null, null);
+    }
+
     public UpdateGameDirection(dir: number): void {
         this.playDirection = dir;
-        this.Socket.send(JSON.stringify({
-            type: "updateGame",
-            playDirection: dir,
-            id: this.gameID
-        })); 
+        this.sendGameRequest({
+            action: { 
+                field: "playDirection",
+                value: this.playDirection
+            },
+            invoker: this.localPlayer.getName(),
+            target: {
+                type: TargetType.Game,
+                id: ""
+            }
+        });
     }
 
     // player null means the next one
     public NotifyPlayer(player: Player, notification: String): void {
-        this.Socket.send(JSON.stringify({
-            type: "notifyPlayer",
-            id: this.gameID,
-            origin: this.localPlayer.GetID(),
-            playDirection: this.playDirection,
-            notification: notification,
-            target: (player != null) ? player.GetID() : ""
-        }));
+        this.sendGameRequest({
+            action: { 
+                field: "!notify",
+                value: notification
+            },
+            invoker: this.localPlayer.getName(),
+            target: {
+                type: TargetType.Player,
+                id: player.getName()
+            }
+        });
     }
 
     public GetLocalPlayDirection(): number {
@@ -1088,8 +1103,7 @@ export abstract class CardGame extends BaseGame {
                 this.players.forEach((p) => {
                     if (p.GetID() == result.player) {
                         console.log("Play Card from player: " + result.player);
-                        this.Deck.GameID = this.gameID;
-                        this.Deck.Socket = this.Socket;
+                        this.Deck.Game = this;
                         this.Deck.PlayCardByNameOnStack(result.stack, result.card, p, result.revealed);
                         this.GUI.PlayerList.UpdatePlayer(p);
                     }
@@ -1101,8 +1115,7 @@ export abstract class CardGame extends BaseGame {
         if (result.type == "drawCard") {
             this.players.forEach((p) => {
                 if (p.GetID() == result.player) {
-                    this.Deck.GameID = this.gameID;
-                    this.Deck.Socket = this.Socket;
+                    this.Deck.Game = this;
                     this.Deck.GiveCardByNameTo(result.card, p);
                     this.GUI.PlayerList.UpdatePlayer(p);
                 }
@@ -1128,47 +1141,6 @@ export abstract class CardGame extends BaseGame {
         //console.log("Unknown response:" + JSON.stringify(result));
     }
 
-    public SetGameID(id: String, doHost: Boolean): Boolean {
-        this.gameID = id;
-        this.bIsHosting = doHost;
-
-        var self = this;
-
-        let str = window.location.hostname;
-        var Socket = new WebSocket("wss://" + str + ":" + this.port + "/" + this.name);
-
-        Socket.onopen = function(e) {
-            console.log("Opened WebSocked for gaming! Greet server!");
-            if (self.bIsHosting) {
-                Socket.send(JSON.stringify({
-                    type: "newGame",
-                    id: self.gameID,
-                    gameType: self.name,
-                    maxPlayers: self.MaxPlayers()
-                }));
-            }
-            else {
-                Socket.send(JSON.stringify({
-                    type: "join",
-                    id: self.gameID
-                }));
-            }
-        };
-
-        Socket.onmessage = function(e) {
-            let result = JSON.parse(e.data);
-            if (result.type == "welcome") {
-                console.log("Server sended greetings!");
-                self.OnConnected(result.Succeeded);
-                if (!result.Succeeded) {
-                    self.OnGameRejected(GameRejectReason.GameNotPresent);
-                }
-            }
-        };
-
-        return true;
-    }
-
     public OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo) {
         if (this.localPlayer == null)
             return;
@@ -1183,11 +1155,10 @@ export abstract class CardGame extends BaseGame {
     }
 
     public EndGame(): void {
-        this.Socket.send(JSON.stringify({
-            type: "endGame",
-            id: this.gameID,
-            player: this.localPlayer.GetID()
-        }));
+        this.sendGameRequest({
+            action: "!endGame",
+            invoker: this.localPlayer.getName()
+        });
 
         this.bIsRunning = false;
         this.players.forEach(p => { p.SetPhase(PlayerGamePhase.Spectating); });

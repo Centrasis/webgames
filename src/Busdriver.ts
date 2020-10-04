@@ -2,12 +2,13 @@ import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { GameRejectReason} from './BaseGame';
-import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, GameState, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
+import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
 import { isUndefined } from 'util';
 import { string } from 'prop-types';
 import { MixMaterial } from 'babylonjs-materials';
 import { CrossBlock } from 'babylonjs';
 import { runInThisContext } from 'vm';
+import { SVEAccount, SVEGame, TargetType, GameState } from 'svebaselib';
 
 enum CardType {
     Number = "Number",
@@ -257,16 +258,20 @@ class PyramidStack extends CardStack {
 
             card.reveal();
 
-            if (!isUndefined(this.Socket)) {
-                this.Socket.send(JSON.stringify({
-                    type: "playCard",
-                    id: this.GameID,
-                    card: card.GetMesh().name,
-                    stack: this.GetID(),
-                    player: (previousOwner == null) ? "" : previousOwner.GetID(),
-                    revealed: true,
-                }));
-            }
+            this.Game.sendGameRequest({
+                action: {
+                    field: "!playCard",
+                    value: { 
+                        card: card.GetMesh().name,
+                        revealed: true
+                    },
+                },
+                invoker: (previousOwner == null) ? "" : previousOwner.getName(),
+                target: {
+                    type: TargetType.Entity,
+                    id: String(this.GetID())
+                }
+            });
         }
         this.setPosition(this.position);
     }
@@ -296,8 +301,7 @@ class BusdriverCardDeck extends BaseCardDeck {
         let cardsPlayed = 0;
         let pyramidStack = this.GetPyramidStack();
         pyramidStack.SettingUp();
-        pyramidStack.Socket = this.Socket;
-        pyramidStack.GameID = this.GameID;
+        pyramidStack.Game = this.Game;
         let drawStack = this.GetDrawStack();
         while(cardsCount - cardsPlayed >= cardsInRow) {
             for (let i = 0; i < cardsInRow; i++) {
@@ -410,8 +414,7 @@ class BusdriverCardDeck extends BaseCardDeck {
     }
 
     public revealFirstCard() {
-        this.stacks[1].Socket = this.Socket;
-        this.stacks[1].GameID = this.GameID;
+        this.stacks[1].Game = this.Game;
         this.stacks[1].addCard(this.stacks[0].DrawCard(), null);
 
         this.setPosition(this.position);
@@ -472,21 +475,25 @@ class BusdriverCardDeck extends BaseCardDeck {
 class BusdriverPlayer extends Player {
     public Points: number;
 
-    constructor(id: String, maxCardCount: number, isLocal: Boolean) {
-        super(id, maxCardCount, isLocal);
+    constructor(user: SVEAccount, maxCardCount: number, isLocal: Boolean) {
+        super(user, maxCardCount, isLocal);
         this.Points = 0;
     }
 
     /** Replicates */
     public SetPoints(pts: number): void {
         this.Points = pts;
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "points",
-            value: this.Points
-        }));
+        this.Game.sendGameRequest({
+            action: {
+                field: "Points",
+                value: this.Points
+            },
+            invoker: this.getName(),
+            target: {
+                id: this.getName(),
+                type: TargetType.Player
+            }
+        });
     }
 
     public GetPoints(): number {
@@ -505,7 +512,7 @@ class BusdriverGUI extends BaseGameGUI {
     protected GameStateText: GUI.TextBlock;
     public AVotingUI: VotingUI;
     public GameID: String;
-    public Socket: WebSocket;
+    public Game: SVEGame;
     protected EndRoundBtn: GUI.Button;
     public OnEndRoundClick: () => void;
 
@@ -571,15 +578,18 @@ class BusdriverGUI extends BaseGameGUI {
         }
         this.AVotingUI = new VotingUI(this.GUI, challenge.ChallengeText, challenge.Answers, (val: String) => {
             self.AVotingUI.removeAll();
-            
-            self.Socket.send(JSON.stringify({
-                type: "vote",
-                id: self.GameID,
-                voteType: "SelfOnly",
-                voteID: challenge.name,
-                invoker: bd.GetLocalPlayerID(),
-                value: val
-            }));
+
+            self.Game.sendGameRequest({
+                action: { 
+                    field: "!vote",
+                    value: {
+                        voteType: "SelfOnly",
+                        voteID: String(challenge.name),
+                        value: val
+                    }
+                },
+                invoker: String(bd.GetLocalPlayerID())
+            });
 
             self.AVotingUI = null;
             bd.OnEndLocalRound();
@@ -608,7 +618,7 @@ enum BusdriverState {
 }
 
 class Busdriver extends CardGame { 
-    public name = "Busdriver";
+    public gameType = "Busdriver";
     protected isSetup = false;
     protected isBusdriver = false;
     protected CurrentRound = RoundType.GuessColor;
@@ -722,14 +732,13 @@ class Busdriver extends CardGame {
                         });
 
                         setTimeout(() => {
-                            (<BusdriverCardDeck>this.Deck).Socket = this.Socket;
-                            (<BusdriverCardDeck>this.Deck).GameID = this.gameID;
+                            (<BusdriverCardDeck>this.Deck).Game = this;
                             (<BusdriverCardDeck>this.Deck).BuildPyramid();
                         }, 1000);
 
                         setTimeout(() => {
                             this.players.forEach(p => {
-                                this.NotifyPlayer(p, "RevealNext!");
+                                this.NotifyPlayer(p, "!RevealNext");
                             });
                         }, 1000);
                     }
@@ -745,7 +754,7 @@ class Busdriver extends CardGame {
                 this.GUI.SetEnabledNextRoundBtn(true);
                 if (this.IsHostInstance()) {
                     this.players.forEach(p => {
-                        this.NotifyPlayer(p, "RevealNext!");
+                        this.NotifyPlayer(p, "!RevealNext");
                     });
                 }
             } else {
@@ -763,24 +772,24 @@ class Busdriver extends CardGame {
     public StartGame(): void {
         this.enableZMovement = true;
         if (this.bIsHosting) {
-            this.Deck.Socket = this.Socket;
-            this.Deck.GameID = this.gameID;
+            this.Deck.Game = this;
 
             this.SetInitialCardCount(0);
             this.players.forEach(p => {
-                p.Socket = this.Socket;
-                p.GameID = this.gameID;
+                p.Game = this;
             });
         }
 
         super.StartGame();
 
         if (this.IsHostInstance()) {
-            this.Socket.send(JSON.stringify({
-                type: "setTurn",
-                player: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
-                id: this.gameID
-            }));
+            this.sendGameRequest({
+                action: {
+                    field: "!setTurn",
+                    value: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
+                },
+                invoker: String(this.GetLocalPlayerID())
+            });
         }
     }
 
@@ -826,17 +835,15 @@ class Busdriver extends CardGame {
         
     }
 
-    public AddPlayer(id: String, isLocal: Boolean, player: Player = null): void {
-        super.AddPlayer(id, isLocal, new BusdriverPlayer(id, 0, isLocal));
+    public AddPlayer(user: SVEAccount, isLocal: Boolean, player: Player = null): void {
+        super.AddPlayer(user, isLocal, new BusdriverPlayer(user, 0, isLocal));
 
         if(isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
 
-        this.Deck.GameID = this.gameID;
-        this.Deck.Socket = this.Socket;
-        this.GUI.GameID = this.gameID;
-        this.GUI.Socket = this.Socket;
+        this.Deck.Game = this;
+        this.GUI.Game = this;
     }
 
     public GetLocalPlayerID(): String {
@@ -1030,7 +1037,7 @@ class Busdriver extends CardGame {
                 this.GUI.SetEnabledNextRoundBtn(true);
             }
 
-            if(result.notification == "RevealNext!") {
+            if(result.notification == "!RevealNext") {
                 (<BusdriverCardDeck>this.Deck).GetPyramidStack().finishSetup();
                 if(!(<BusdriverCardDeck>this.Deck).GetPyramidStack().revealNextCard()) {
                     this.CurrentRound = RoundType.Suspend;
@@ -1054,8 +1061,7 @@ class Busdriver extends CardGame {
                     let stack = this.Deck.GetStackFromPick(pickInfo);
                     if (!isUndefined(stack) && stack != null) {
                         if (stack.GetID() == (<BusdriverCardDeck>this.Deck).GetPyramidStack().GetID()) {
-                            stack.Socket = this.Socket;
-                            stack.GameID = this.gameID;
+                            stack.Game = this;
                             stack.PlayCardOnStack(this.localPlayer);
                         }
                     }
@@ -1067,8 +1073,7 @@ class Busdriver extends CardGame {
         if (gameState != GameState.Undetermined) {
             this.GUI.ShowGameState(gameState); 
 
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
             this.localPlayer.SetGameState(gameState);
 
             this.EndGame();

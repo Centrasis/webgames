@@ -1,12 +1,9 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import { GameRejectReason} from './BaseGame';
-import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, GameState, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
-import { isUndefined } from 'util';
-import { string } from 'prop-types';
+import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
 import { MixMaterial } from 'babylonjs-materials';
-import { CrossBlock, Mesh, CubeMapToSphericalPolynomialTools } from 'babylonjs';
+import {GameInfo, GameState, SVEAccount, SVEGame, TargetType} from 'svebaselib';
 
 enum CardType {
     Number = "Number",
@@ -134,8 +131,8 @@ class WizardPlayer extends Player {
     protected playerNamePanel: BABYLON.Mesh;
     protected nameTexture: GUI.AdvancedDynamicTexture;
 
-    constructor(id: String, maxCardCount: number, isLocal: Boolean, scene: BABYLON.Scene) {
-        super(id, maxCardCount, isLocal);
+    constructor(user: SVEAccount, maxCardCount: number, isLocal: Boolean, scene: BABYLON.Scene) {
+        super(user, maxCardCount, isLocal);
         this.Points = 0;
         this.RoundPoints = 0;
         this.TargetPoints = -1;
@@ -149,7 +146,7 @@ class WizardPlayer extends Player {
         text.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
         text.fontSize = 40;
         text.color = "orange";
-        text.text = id.toString();
+        text.text = user.getName();
 
         this.nameTexture.addControl(text);
     }
@@ -157,13 +154,17 @@ class WizardPlayer extends Player {
     /** Replicates */
     protected SetPoints(pts: number): void {
         this.Points = pts;
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "points",
-            value: this.Points
-        }));
+        this.Game.sendGameRequest({
+            action: {
+                field: "Points",
+                value: this.Points
+            },
+            invoker: this.getName(),
+            target: {
+                id: this.getName(),
+                type: TargetType.Player
+            }
+        });
     }
 
     public IsFirstRound(val: boolean, idx: number, camera: BABYLON.FreeCamera): void {
@@ -197,25 +198,33 @@ class WizardPlayer extends Player {
     /** Replicates */
     public SetTargetPoints(pts: number) {
         this.TargetPoints = pts;
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "targetpoints",
-            value: this.TargetPoints
-        }));
+        this.Game.sendGameRequest({
+            invoker: this.getName(),
+            target: {
+                type: TargetType.Player,
+                id: this.getName()
+            },
+            action: {
+                field: "TargetPoints",
+                value: this.TargetPoints
+            }
+        });
     }
 
     /** Replicates */
     public SetRoundPoints(pts: number): void {
-        this.Points = pts;
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "roundpoints",
-            value: this.RoundPoints
-        }));
+        this.RoundPoints = pts;
+        this.Game.sendGameRequest({
+            invoker: this.getName(),
+            target: {
+                type: TargetType.Player,
+                id: this.getName()
+            },
+            action: {
+                field: "RoundPoints",
+                value: this.RoundPoints
+            }
+        });
     }
 
     public GetPoints(): number {
@@ -339,8 +348,7 @@ class WizardCardDeck extends BaseCardDeck {
         let c = <WizardCard>stack.DrawCard();
         if(c != null) {
             console.log("Trump is: " + c.GetColor().toString());
-            stack.Socket = this.Socket;
-            stack.GameID = this.GameID;
+            stack.Game = this.Game;
             stack.addCard(c, null, true);
             stack.update();
             this.TrumpCard = c.GetColor();
@@ -521,7 +529,7 @@ class WizardGUI extends BaseGameGUI {
     protected GameStateText: GUI.TextBlock;
     public AVotingUI: VotingUI;
     public GameID: String;
-    public Socket: WebSocket;
+    public Game: SVEGame;
 
     constructor(scene: BABYLON.Scene) {
         super(scene);
@@ -552,13 +560,17 @@ class WizardGUI extends BaseGameGUI {
         this.AVotingUI = new VotingUI(this.GUI, "Wie viele Stiche wirst du bekommen?", list, (val: String) => {
             self.AVotingUI.removeAll();
             
-            self.Socket.send(JSON.stringify({
-                type: "vote",
-                id: self.GameID,
-                voteType: "SelfOnly",
-                voteID: "PointsGuess_" + ug.GetLocalPlayerID(),
-                value: val
-            }));
+            self.Game.sendGameRequest({
+                action: { 
+                    field: "!vote",
+                    value: {
+                        voteType: "SelfOnly",
+                        voteID: "PointsGuess_" + ug.GetLocalPlayerID(),
+                        value: val
+                    }
+                },
+                invoker: String(ug.GetLocalPlayerID())
+            });
 
             self.AVotingUI = null;
             ug.OnEndLocalRound();
@@ -571,7 +583,7 @@ class WizardGUI extends BaseGameGUI {
 }
 
 class Wizard extends CardGame {
-    public name = "Wizard";
+    public gameType = "Wizard";
     protected isSetup = false;
     protected GUI: WizardGUI;
     protected bIsSuspended: Boolean;
@@ -580,8 +592,9 @@ class Wizard extends CardGame {
     protected lastPlayerBeganID: String;
     protected hadPlayedSinceReset = false;
 
-    constructor (port: number) {
-        super(port);
+    constructor (info: GameInfo) {
+        super(info);
+        this.gameType = "Wizard";
         this.bIsSuspended = false;
     }
 
@@ -612,7 +625,7 @@ class Wizard extends CardGame {
             if(this.IsHostInstance()) {
                 
                 this.players.forEach(p => {
-                    this.NotifyPlayer(p, "reset!");
+                    this.NotifyPlayer(p, "!reset");
                 });
                 
             } else {
@@ -639,17 +652,20 @@ class Wizard extends CardGame {
                     (<WizardPlayer>player).SetRoundPoints((<WizardPlayer>player).GetRoundPoints() + 1);
                 }
                 console.log("Get next trump!");
-                (<WizardCardDeck>this.Deck).Socket = this.Socket;
-                (<WizardCardDeck>this.Deck).GameID = this.gameID;
+                (<WizardCardDeck>this.Deck).Game = this;
                 (<WizardCardDeck>this.Deck).RevealTrumpCard();
                 this.players.forEach(p => {
-                    this.Socket.send(JSON.stringify({
-                        type: "updatePlayer",
-                        id: this.gameID,
-                        player: p.GetID(),
-                        field: "trumpCard",
-                        value: (<WizardCardDeck>this.Deck).GetTrumpCard()
-                    }));
+                    this.sendGameRequest({
+                        invoker: "",
+                        target: {
+                            type: TargetType.Player,
+                            id: p.getName()
+                        },
+                        action: {
+                            field: "TrumpCard",
+                            value: (<WizardCardDeck>this.Deck).GetTrumpCard()
+                        }
+                    });
                 });
             }
             this.hadPlayedSinceReset = true;
@@ -677,12 +693,11 @@ class Wizard extends CardGame {
         this.bIsSuspended = false;
 
         if (this.bIsHosting) {
-            this.Deck.Socket = this.Socket;
-            this.Deck.GameID = this.gameID;       
+            this.Deck.Game = this;       
 
             this.SetInitialCardCount(1);
             this.players.forEach(p => {
-                this.NotifyPlayer(p, "reset!");
+                this.NotifyPlayer(p, "!reset");
             });
         }
     }
@@ -706,17 +721,16 @@ class Wizard extends CardGame {
         
     }
 
-    public AddPlayer(id: String, isLocal: Boolean, player: Player = null): void {
-        super.AddPlayer(id, isLocal, new WizardPlayer(id, 1, isLocal, this.scene));
+    public AddPlayer(user: SVEAccount, isLocal: Boolean, player: Player = null): void {
+        super.AddPlayer(user, isLocal, new WizardPlayer(user, 1, isLocal, this.scene));
 
         if(isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
 
-        this.Deck.GameID = this.gameID;
-        this.Deck.Socket = this.Socket;
+        this.Deck.Game = this;
         this.GUI.GameID = this.gameID;
-        this.GUI.Socket = this.Socket;
+        this.GUI.Game = this;
     }
 
     public OnServerResponse(result: any): void {
@@ -753,11 +767,13 @@ class Wizard extends CardGame {
                             this.lastPlayerBeganID = this.players[Math.round(Math.random() * (this.players.length - 1))].GetID();
                         }
     
-                        this.Socket.send(JSON.stringify({
-                            type: "setTurn",
-                            player: this.lastPlayerBeganID,
-                            id: this.gameID
-                        }));
+                        this.sendGameRequest({
+                            action: {
+                                field: "!setTurn",
+                                value: this.lastPlayerBeganID,
+                            },
+                            invoker: String(this.GetLocalPlayerID())
+                        });
                     }
                 }
             }
@@ -841,7 +857,7 @@ class Wizard extends CardGame {
         }
 
         if (result.type == "notifyPlayer") {
-            if(result.notification == "reset!") {
+            if(result.notification == "!reset") {
                 this.lastPlayerBeganID = "";
                 this.hadPlayedSinceReset = false;
                 this.roundCount++;
@@ -851,8 +867,7 @@ class Wizard extends CardGame {
                 }
                 console.log("Start round: " + this.roundCount);
                 if (this.bIsHosting) {
-                    (<WizardCardDeck>this.Deck).Socket = this.Socket;
-                    (<WizardCardDeck>this.Deck).GameID = this.gameID;
+                    (<WizardCardDeck>this.Deck).Game = this;
                     (<WizardCardDeck>this.Deck).ResetPlayedCards();
                     
                     if(this.roundCount > 1) {
@@ -866,14 +881,12 @@ class Wizard extends CardGame {
 
                     setTimeout(() => {
                         this.players.forEach(p => {
-                            p.Socket = this.Socket;
-                            p.GameID = this.gameID;
+                            p.Game = this;
                             p.drawNumberOfCards((<WizardCardDeck>this.Deck).GetDrawStack(), this.roundCount);
                         });
 
                         console.log("Reveal trump!");
-                        (<WizardCardDeck>this.Deck).Socket = this.Socket;
-                        (<WizardCardDeck>this.Deck).GameID = this.gameID;
+                        (<WizardCardDeck>this.Deck).Game = this;
                         (<WizardCardDeck>this.Deck).RevealTrumpCard();
 
                         if (this.roundCount == 1) {
@@ -911,8 +924,7 @@ class Wizard extends CardGame {
                     stack = (<WizardCardDeck>this.Deck).GetStacks()[0];
                 }
                 if (stack != null) {
-                    stack.Socket = this.Socket;
-                    stack.GameID = this.gameID;
+                    stack.Game = this;
                     stack.PlayCardOnStack(this.localPlayer);
                     this.OnEndLocalRound();
                 }
@@ -923,8 +935,7 @@ class Wizard extends CardGame {
         if (gameState != GameState.Undetermined) {
             this.GUI.ShowGameState(gameState); 
 
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
             this.localPlayer.SetGameState(gameState);
 
             this.EndGame();

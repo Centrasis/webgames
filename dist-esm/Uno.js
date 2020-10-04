@@ -14,7 +14,8 @@ var __extends = (this && this.__extends) || (function () {
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, GameState, VotingUI, BaseCardDeck } from './CardGame';
+import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, VotingUI, BaseCardDeck } from './CardGame';
+import { GameState } from 'svebaselib';
 var CardType;
 (function (CardType) {
     CardType["Number"] = "Number";
@@ -295,8 +296,7 @@ var UNOCardDeck = /** @class */ (function (_super) {
         this.setPosition(this.position);
     };
     UNOCardDeck.prototype.revealFirstCard = function () {
-        this.stacks[1].Socket = this.Socket;
-        this.stacks[1].GameID = this.GameID;
+        this.stacks[1].Game = this.Game;
         this.stacks[1].addCard(this.stacks[0].DrawCard(), null);
         this.setPosition(this.position);
     };
@@ -378,13 +378,17 @@ var UNOGUI = /** @class */ (function (_super) {
         var self = this;
         this.AVotingUI = new VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], function (val) {
             self.AVotingUI.removeAll();
-            self.Socket.send(JSON.stringify({
-                type: "vote",
-                id: self.GameID,
-                voteType: "SelfOnly",
-                voteID: "ColorWish",
-                value: val
-            }));
+            self.Game.sendGameRequest({
+                action: {
+                    field: "!vote",
+                    value: {
+                        voteType: "SelfOnly",
+                        voteID: "ColorWish",
+                        value: val
+                    }
+                },
+                invoker: String(self.Game.GetLocalPlayerID())
+            });
             self.AVotingUI = null;
             ug.OnEndLocalRound();
         });
@@ -396,11 +400,12 @@ var UNOGUI = /** @class */ (function (_super) {
 }(BaseGameGUI));
 var UNO = /** @class */ (function (_super) {
     __extends(UNO, _super);
-    function UNO(port) {
-        var _this = _super.call(this, port) || this;
-        _this.name = "UNO";
+    function UNO(info) {
+        var _this = _super.call(this, info) || this;
+        _this.gameType = "UNO";
         _this.isSetup = false;
         _this.bIsSuspended = false;
+        _this.gameType = "UNO";
         return _this;
     }
     UNO.prototype.CheckGameState = function () {
@@ -444,13 +449,11 @@ var UNO = /** @class */ (function (_super) {
     UNO.prototype.StartGame = function () {
         var _this = this;
         if (this.bIsHosting) {
-            this.Deck.Socket = this.Socket;
-            this.Deck.GameID = this.gameID;
+            this.Deck.Game = this;
             this.Deck.revealFirstCard();
             this.SetInitialCardCount(7);
             this.players.forEach(function (p) {
-                p.Socket = _this.Socket;
-                p.GameID = _this.gameID;
+                p.Game = _this;
                 p.drawNumberOfCards(_this.Deck.GetDrawStack(), 7);
             });
         }
@@ -461,11 +464,13 @@ var UNO = /** @class */ (function (_super) {
         }
         else {
             if (this.IsHostInstance()) {
-                this.Socket.send(JSON.stringify({
-                    type: "setTurn",
-                    player: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
-                    id: this.gameID
-                }));
+                this.sendGameRequest({
+                    action: {
+                        field: "!setTurn",
+                        value: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
+                    },
+                    invoker: String(this.GetLocalPlayerID())
+                });
             }
         }
     };
@@ -511,10 +516,9 @@ var UNO = /** @class */ (function (_super) {
         if (isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
-        this.Deck.GameID = this.gameID;
-        this.Deck.Socket = this.Socket;
+        this.Deck.Game = this;
         this.GUI.GameID = this.gameID;
-        this.GUI.Socket = this.Socket;
+        this.GUI.Game = this;
     };
     UNO.prototype.OnServerResponse = function (result) {
         _super.prototype.OnServerResponse.call(this, result);
@@ -588,8 +592,7 @@ var UNO = /** @class */ (function (_super) {
             if (pickInfo != null && this.localPlayer.GetPhase() != PlayerGamePhase.Spectating) {
                 var stack = this.Deck.GetStackFromPick(pickInfo);
                 if (stack != null) {
-                    stack.Socket = this.Socket;
-                    stack.GameID = this.gameID;
+                    stack.Game = this;
                     if (this.localPlayer.GetSelectedCard().GetColor() == CardColor.Black) {
                         stack.PlayCardOnStack(this.localPlayer);
                     }
@@ -604,8 +607,7 @@ var UNO = /** @class */ (function (_super) {
         var gameState = this.CheckGameState();
         if (gameState != GameState.Undetermined) {
             this.GUI.ShowGameState(gameState);
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
             this.localPlayer.SetGameState(gameState);
             this.EndGame();
         }

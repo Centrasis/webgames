@@ -14,7 +14,8 @@ var __extends = (this && this.__extends) || (function () {
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, GameState, VotingUI, BaseCardDeck } from './CardGame';
+import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, VotingUI, BaseCardDeck } from './CardGame';
+import { GameState } from 'svebaselib';
 var TheGameCardDeck = /** @class */ (function (_super) {
     __extends(TheGameCardDeck, _super);
     function TheGameCardDeck(maxValue, duplicateCount, materials, scene, hl) {
@@ -145,12 +146,17 @@ var TheGameGUI = /** @class */ (function (_super) {
         var self = this;
         this.AVotingUI = new VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), function (val) {
             self.AVotingUI.removeAll();
-            self.Socket.send(JSON.stringify({
-                type: "vote",
-                id: self.GameID,
-                voteID: "PlayerStart",
-                value: val
-            }));
+            self.Game.sendGameRequest({
+                action: {
+                    field: "!vote",
+                    value: {
+                        voteType: "vote",
+                        voteID: "PlayerStart",
+                        value: val
+                    }
+                },
+                invoker: String(self.Game.GetLocalPlayerID())
+            });
             self.AVotingUI = null;
         });
     };
@@ -174,9 +180,10 @@ var TheGameGUI = /** @class */ (function (_super) {
 }(BaseGameGUI));
 var TheGame = /** @class */ (function (_super) {
     __extends(TheGame, _super);
-    function TheGame(port) {
-        var _this = _super.call(this, port) || this;
-        _this.name = "TheGame";
+    function TheGame(info) {
+        var _this = _super.call(this, info) || this;
+        _this.gameType = "TheGame";
+        _this.gameType = "TheGame";
         return _this;
     }
     TheGame.prototype.CheckGameState = function () {
@@ -248,7 +255,7 @@ var TheGame = /** @class */ (function (_super) {
     };
     TheGame.prototype.ShowVotePlayerStartGUI = function () {
         console.log("Vote for the player to start.");
-        this.GUI.Socket = this.Socket;
+        this.GUI.Game = this;
         this.GUI.GameID = this.gameID;
         this.GUI.ShowVotePlayerStart();
     };
@@ -301,10 +308,9 @@ var TheGame = /** @class */ (function (_super) {
         if (isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
-        this.Deck.GameID = this.gameID;
-        this.Deck.Socket = this.Socket;
+        this.Deck.Game = this;
         this.GUI.GameID = this.gameID;
-        this.GUI.Socket = this.Socket;
+        this.GUI.Game = this;
     };
     TheGame.prototype.OnServerResponse = function (result) {
         var _this = this;
@@ -313,11 +319,13 @@ var TheGame = /** @class */ (function (_super) {
             if (this.bIsHosting) {
                 if (result.voteID == "PlayerStart") {
                     console.log("Got voting result for player start: " + result.value);
-                    this.Socket.send(JSON.stringify({
-                        type: "setTurn",
-                        player: result.value,
-                        id: this.gameID
-                    }));
+                    this.sendGameRequest({
+                        action: {
+                            field: "!setTurn",
+                            value: result.value,
+                        },
+                        invoker: String(this.GetLocalPlayerID())
+                    });
                 }
             }
             return;
@@ -359,8 +367,7 @@ var TheGame = /** @class */ (function (_super) {
             var stack = this.Deck.GetStackFromPick(pickInfo);
             if (stack != null) {
                 {
-                    stack.Socket = this.Socket;
-                    stack.GameID = this.gameID;
+                    stack.Game = this;
                     stack.PlayCardOnStack(this.localPlayer);
                 }
             }
@@ -371,8 +378,7 @@ var TheGame = /** @class */ (function (_super) {
         var gameState = this.CheckGameState();
         if (gameState != GameState.Undetermined) {
             this.GUI.ShowGameState(gameState);
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
             this.localPlayer.SetGameState(gameState);
             this.EndGame();
         }

@@ -16,6 +16,7 @@
     "babylonjs-materials": "^4.1.0",
     "prop-types": "^15.7.2",
     "querystring": "^0.2.0",
+    "svebaselib": "github:ftl999/svebaselib",
     "typescript": "^3.9.7",
     "ws": "^7.3.1"
   },

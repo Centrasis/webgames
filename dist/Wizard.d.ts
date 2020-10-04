@@ -1,11 +1,12 @@
 import * as BABYLON from 'babylonjs';
 import * as GUI from 'babylonjs-gui';
-import { BaseGameGUI, CardGame, Player, GameState, VotingUI } from './CardGame';
+import { BaseGameGUI, CardGame, Player, VotingUI } from './CardGame';
+import { GameInfo, GameState, SVEAccount, SVEGame } from 'svebaselib';
 declare class WizardGUI extends BaseGameGUI {
     protected GameStateText: GUI.TextBlock;
     AVotingUI: VotingUI;
     GameID: String;
-    Socket: WebSocket;
+    Game: SVEGame;
     constructor(scene: BABYLON.Scene);
     protected GetTextLine(player: Player): string;
     ShowGameState(gs: GameState): void;
@@ -13,7 +14,7 @@ declare class WizardGUI extends BaseGameGUI {
     HideGameState(): void;
 }
 declare class Wizard extends CardGame {
-    name: string;
+    gameType: string;
     protected isSetup: boolean;
     protected GUI: WizardGUI;
     protected bIsSuspended: Boolean;
@@ -21,14 +22,14 @@ declare class Wizard extends CardGame {
     maxRoundCount: number;
     protected lastPlayerBeganID: String;
     protected hadPlayedSinceReset: boolean;
-    constructor(port: number);
+    constructor(info: GameInfo);
     CheckGameState(): GameState;
     StartLocalPlayersRound(): void;
     OnEndLocalRound(): void;
     StartGame(): void;
     CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     Tick(): void;
-    AddPlayer(id: String, isLocal: Boolean, player?: Player): void;
+    AddPlayer(user: SVEAccount, isLocal: Boolean, player?: Player): void;
     OnServerResponse(result: any): void;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     MinPlayers(): number;

@@ -38,6 +38,7 @@ var Materials = __importStar(require("babylonjs-materials"));
 var GUI = __importStar(require("babylonjs-gui"));
 var CardGame_1 = require("./CardGame");
 var util_1 = require("util");
+var svebaselib_1 = require("svebaselib");
 var CardType;
 (function (CardType) {
     CardType["Number"] = "Number";
@@ -249,16 +250,20 @@ var PyramidStack = /** @class */ (function (_super) {
                 previousOwner.SetPoints(previousOwner.Points + 1);
             }
             card.reveal();
-            if (!util_1.isUndefined(this.Socket)) {
-                this.Socket.send(JSON.stringify({
-                    type: "playCard",
-                    id: this.GameID,
-                    card: card.GetMesh().name,
-                    stack: this.GetID(),
-                    player: (previousOwner == null) ? "" : previousOwner.GetID(),
-                    revealed: true,
-                }));
-            }
+            this.Game.sendGameRequest({
+                action: {
+                    field: "!playCard",
+                    value: {
+                        card: card.GetMesh().name,
+                        revealed: true
+                    },
+                },
+                invoker: (previousOwner == null) ? "" : previousOwner.getName(),
+                target: {
+                    type: svebaselib_1.TargetType.Entity,
+                    id: String(this.GetID())
+                }
+            });
         }
         this.setPosition(this.position);
     };
@@ -353,8 +358,7 @@ var BusdriverCardDeck = /** @class */ (function (_super) {
         var cardsPlayed = 0;
         var pyramidStack = this.GetPyramidStack();
         pyramidStack.SettingUp();
-        pyramidStack.Socket = this.Socket;
-        pyramidStack.GameID = this.GameID;
+        pyramidStack.Game = this.Game;
         var drawStack = this.GetDrawStack();
         while (cardsCount - cardsPlayed >= cardsInRow) {
             for (var i = 0; i < cardsInRow; i++) {
@@ -379,8 +383,7 @@ var BusdriverCardDeck = /** @class */ (function (_super) {
         this.setPosition(this.position);
     };
     BusdriverCardDeck.prototype.revealFirstCard = function () {
-        this.stacks[1].Socket = this.Socket;
-        this.stacks[1].GameID = this.GameID;
+        this.stacks[1].Game = this.Game;
         this.stacks[1].addCard(this.stacks[0].DrawCard(), null);
         this.setPosition(this.position);
     };
@@ -429,21 +432,25 @@ var BusdriverCardDeck = /** @class */ (function (_super) {
 }(CardGame_1.BaseCardDeck));
 var BusdriverPlayer = /** @class */ (function (_super) {
     __extends(BusdriverPlayer, _super);
-    function BusdriverPlayer(id, maxCardCount, isLocal) {
-        var _this = _super.call(this, id, maxCardCount, isLocal) || this;
+    function BusdriverPlayer(user, maxCardCount, isLocal) {
+        var _this = _super.call(this, user, maxCardCount, isLocal) || this;
         _this.Points = 0;
         return _this;
     }
     /** Replicates */
     BusdriverPlayer.prototype.SetPoints = function (pts) {
         this.Points = pts;
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "points",
-            value: this.Points
-        }));
+        this.Game.sendGameRequest({
+            action: {
+                field: "Points",
+                value: this.Points
+            },
+            invoker: this.getName(),
+            target: {
+                id: this.getName(),
+                type: svebaselib_1.TargetType.Player
+            }
+        });
     };
     BusdriverPlayer.prototype.GetPoints = function () {
         return this.Points;
@@ -496,8 +503,8 @@ var BusdriverGUI = /** @class */ (function (_super) {
         return player.GetID().toString() + ", Punkte: " + player.GetPoints();
     };
     BusdriverGUI.prototype.ShowGameState = function (gs) {
-        this.GameStateText.text = (gs == CardGame_1.GameState.Won) ? "Gewonnen!" : "Verloren!";
-        this.GameStateText.color = (gs == CardGame_1.GameState.Won) ? "green" : "red";
+        this.GameStateText.text = (gs == svebaselib_1.GameState.Won) ? "Gewonnen!" : "Verloren!";
+        this.GameStateText.color = (gs == svebaselib_1.GameState.Won) ? "green" : "red";
         this.GUI.addControl(this.GameStateText);
     };
     BusdriverGUI.prototype.ShowChallenge = function (bd, challenge) {
@@ -508,14 +515,17 @@ var BusdriverGUI = /** @class */ (function (_super) {
         }
         this.AVotingUI = new CardGame_1.VotingUI(this.GUI, challenge.ChallengeText, challenge.Answers, function (val) {
             self.AVotingUI.removeAll();
-            self.Socket.send(JSON.stringify({
-                type: "vote",
-                id: self.GameID,
-                voteType: "SelfOnly",
-                voteID: challenge.name,
-                invoker: bd.GetLocalPlayerID(),
-                value: val
-            }));
+            self.Game.sendGameRequest({
+                action: {
+                    field: "!vote",
+                    value: {
+                        voteType: "SelfOnly",
+                        voteID: String(challenge.name),
+                        value: val
+                    }
+                },
+                invoker: String(bd.GetLocalPlayerID())
+            });
             self.AVotingUI = null;
             bd.OnEndLocalRound();
         });
@@ -545,7 +555,7 @@ var Busdriver = /** @class */ (function (_super) {
     __extends(Busdriver, _super);
     function Busdriver() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.name = "Busdriver";
+        _this.gameType = "Busdriver";
         _this.isSetup = false;
         _this.isBusdriver = false;
         _this.CurrentRound = RoundType.GuessColor;
@@ -557,14 +567,14 @@ var Busdriver = /** @class */ (function (_super) {
             // check for win conditions
             var ret_1 = true;
             this.players.forEach(function (p) {
-                ret_1 = ret_1 && p.GetGameState() == CardGame_1.GameState.Won;
+                ret_1 = ret_1 && p.GetGameState() == svebaselib_1.GameState.Won;
             });
             if (ret_1) {
-                return CardGame_1.GameState.Won;
+                return svebaselib_1.GameState.Won;
             }
         }
         // else state is Undetermined
-        return CardGame_1.GameState.Undetermined;
+        return svebaselib_1.GameState.Undetermined;
     };
     Busdriver.prototype.GetChallengeFromType = function (type) {
         var _this = this;
@@ -651,13 +661,12 @@ var Busdriver = /** @class */ (function (_super) {
                             _this.NotifyPlayer(p, "SwitchToPyramid!");
                         });
                         setTimeout(function () {
-                            _this.Deck.Socket = _this.Socket;
-                            _this.Deck.GameID = _this.gameID;
+                            _this.Deck.Game = _this;
                             _this.Deck.BuildPyramid();
                         }, 1000);
                         setTimeout(function () {
                             _this.players.forEach(function (p) {
-                                _this.NotifyPlayer(p, "RevealNext!");
+                                _this.NotifyPlayer(p, "!RevealNext");
                             });
                         }, 1000);
                     }
@@ -673,7 +682,7 @@ var Busdriver = /** @class */ (function (_super) {
                 this.GUI.SetEnabledNextRoundBtn(true);
                 if (this.IsHostInstance()) {
                     this.players.forEach(function (p) {
-                        _this.NotifyPlayer(p, "RevealNext!");
+                        _this.NotifyPlayer(p, "!RevealNext");
                     });
                 }
             }
@@ -691,21 +700,21 @@ var Busdriver = /** @class */ (function (_super) {
         var _this = this;
         this.enableZMovement = true;
         if (this.bIsHosting) {
-            this.Deck.Socket = this.Socket;
-            this.Deck.GameID = this.gameID;
+            this.Deck.Game = this;
             this.SetInitialCardCount(0);
             this.players.forEach(function (p) {
-                p.Socket = _this.Socket;
-                p.GameID = _this.gameID;
+                p.Game = _this;
             });
         }
         _super.prototype.StartGame.call(this);
         if (this.IsHostInstance()) {
-            this.Socket.send(JSON.stringify({
-                type: "setTurn",
-                player: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
-                id: this.gameID
-            }));
+            this.sendGameRequest({
+                action: {
+                    field: "!setTurn",
+                    value: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
+                },
+                invoker: String(this.GetLocalPlayerID())
+            });
         }
     };
     Busdriver.prototype.CreateScene = function (engine, canvas) {
@@ -734,16 +743,14 @@ var Busdriver = /** @class */ (function (_super) {
     };
     Busdriver.prototype.Tick = function () {
     };
-    Busdriver.prototype.AddPlayer = function (id, isLocal, player) {
+    Busdriver.prototype.AddPlayer = function (user, isLocal, player) {
         if (player === void 0) { player = null; }
-        _super.prototype.AddPlayer.call(this, id, isLocal, new BusdriverPlayer(id, 0, isLocal));
+        _super.prototype.AddPlayer.call(this, user, isLocal, new BusdriverPlayer(user, 0, isLocal));
         if (isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
-        this.Deck.GameID = this.gameID;
-        this.Deck.Socket = this.Socket;
-        this.GUI.GameID = this.gameID;
-        this.GUI.Socket = this.Socket;
+        this.Deck.Game = this;
+        this.GUI.Game = this;
     };
     Busdriver.prototype.GetLocalPlayerID = function () {
         return this.localPlayer.GetID();
@@ -926,7 +933,7 @@ var Busdriver = /** @class */ (function (_super) {
                 this.CurrentRound = RoundType.PlayingPyramid;
                 this.GUI.SetEnabledNextRoundBtn(true);
             }
-            if (result.notification == "RevealNext!") {
+            if (result.notification == "!RevealNext") {
                 this.Deck.GetPyramidStack().finishSetup();
                 if (!this.Deck.GetPyramidStack().revealNextCard()) {
                     this.CurrentRound = RoundType.Suspend;
@@ -946,8 +953,7 @@ var Busdriver = /** @class */ (function (_super) {
                     var stack = this.Deck.GetStackFromPick(pickInfo);
                     if (!util_1.isUndefined(stack) && stack != null) {
                         if (stack.GetID() == this.Deck.GetPyramidStack().GetID()) {
-                            stack.Socket = this.Socket;
-                            stack.GameID = this.gameID;
+                            stack.Game = this;
                             stack.PlayCardOnStack(this.localPlayer);
                         }
                     }
@@ -955,10 +961,9 @@ var Busdriver = /** @class */ (function (_super) {
             }
         }
         var gameState = this.CheckGameState();
-        if (gameState != CardGame_1.GameState.Undetermined) {
+        if (gameState != svebaselib_1.GameState.Undetermined) {
             this.GUI.ShowGameState(gameState);
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
             this.localPlayer.SetGameState(gameState);
             this.EndGame();
         }

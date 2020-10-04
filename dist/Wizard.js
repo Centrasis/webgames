@@ -37,6 +37,7 @@ var BABYLON = __importStar(require("babylonjs"));
 var Materials = __importStar(require("babylonjs-materials"));
 var GUI = __importStar(require("babylonjs-gui"));
 var CardGame_1 = require("./CardGame");
+var svebaselib_1 = require("svebaselib");
 var CardType;
 (function (CardType) {
     CardType["Number"] = "Number";
@@ -141,8 +142,8 @@ var WizardCard = /** @class */ (function (_super) {
 }(CardGame_1.Card));
 var WizardPlayer = /** @class */ (function (_super) {
     __extends(WizardPlayer, _super);
-    function WizardPlayer(id, maxCardCount, isLocal, scene) {
-        var _this = _super.call(this, id, maxCardCount, isLocal) || this;
+    function WizardPlayer(user, maxCardCount, isLocal, scene) {
+        var _this = _super.call(this, user, maxCardCount, isLocal) || this;
         _this.bFirstRound = false;
         _this.Points = 0;
         _this.RoundPoints = 0;
@@ -156,20 +157,24 @@ var WizardPlayer = /** @class */ (function (_super) {
         text.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
         text.fontSize = 40;
         text.color = "orange";
-        text.text = id.toString();
+        text.text = user.getName();
         _this.nameTexture.addControl(text);
         return _this;
     }
     /** Replicates */
     WizardPlayer.prototype.SetPoints = function (pts) {
         this.Points = pts;
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "points",
-            value: this.Points
-        }));
+        this.Game.sendGameRequest({
+            action: {
+                field: "Points",
+                value: this.Points
+            },
+            invoker: this.getName(),
+            target: {
+                id: this.getName(),
+                type: svebaselib_1.TargetType.Player
+            }
+        });
     };
     WizardPlayer.prototype.IsFirstRound = function (val, idx, camera) {
         if (this.bFirstRound == val)
@@ -197,24 +202,32 @@ var WizardPlayer = /** @class */ (function (_super) {
     /** Replicates */
     WizardPlayer.prototype.SetTargetPoints = function (pts) {
         this.TargetPoints = pts;
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "targetpoints",
-            value: this.TargetPoints
-        }));
+        this.Game.sendGameRequest({
+            invoker: this.getName(),
+            target: {
+                type: svebaselib_1.TargetType.Player,
+                id: this.getName()
+            },
+            action: {
+                field: "TargetPoints",
+                value: this.TargetPoints
+            }
+        });
     };
     /** Replicates */
     WizardPlayer.prototype.SetRoundPoints = function (pts) {
-        this.Points = pts;
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "roundpoints",
-            value: this.RoundPoints
-        }));
+        this.RoundPoints = pts;
+        this.Game.sendGameRequest({
+            invoker: this.getName(),
+            target: {
+                type: svebaselib_1.TargetType.Player,
+                id: this.getName()
+            },
+            action: {
+                field: "RoundPoints",
+                value: this.RoundPoints
+            }
+        });
     };
     WizardPlayer.prototype.GetPoints = function () {
         return this.Points;
@@ -384,8 +397,7 @@ var WizardCardDeck = /** @class */ (function (_super) {
         var c = stack.DrawCard();
         if (c != null) {
             console.log("Trump is: " + c.GetColor().toString());
-            stack.Socket = this.Socket;
-            stack.GameID = this.GameID;
+            stack.Game = this.Game;
             stack.addCard(c, null, true);
             stack.update();
             this.TrumpCard = c.GetColor();
@@ -482,8 +494,8 @@ var WizardGUI = /** @class */ (function (_super) {
         return player.GetID().toString() + ", Stiche: " + player.GetPoints() + ", Vorher: " + player.GetTargetPoints();
     };
     WizardGUI.prototype.ShowGameState = function (gs) {
-        this.GameStateText.text = (gs == CardGame_1.GameState.Won) ? "Gewonnen!" : "Verloren!";
-        this.GameStateText.color = (gs == CardGame_1.GameState.Won) ? "green" : "red";
+        this.GameStateText.text = (gs == svebaselib_1.GameState.Won) ? "Gewonnen!" : "Verloren!";
+        this.GameStateText.color = (gs == svebaselib_1.GameState.Won) ? "green" : "red";
         this.GUI.addControl(this.GameStateText);
     };
     WizardGUI.prototype.ShowPointsGuess = function (ug) {
@@ -494,13 +506,17 @@ var WizardGUI = /** @class */ (function (_super) {
         }
         this.AVotingUI = new CardGame_1.VotingUI(this.GUI, "Wie viele Stiche wirst du bekommen?", list, function (val) {
             self.AVotingUI.removeAll();
-            self.Socket.send(JSON.stringify({
-                type: "vote",
-                id: self.GameID,
-                voteType: "SelfOnly",
-                voteID: "PointsGuess_" + ug.GetLocalPlayerID(),
-                value: val
-            }));
+            self.Game.sendGameRequest({
+                action: {
+                    field: "!vote",
+                    value: {
+                        voteType: "SelfOnly",
+                        voteID: "PointsGuess_" + ug.GetLocalPlayerID(),
+                        value: val
+                    }
+                },
+                invoker: String(ug.GetLocalPlayerID())
+            });
             self.AVotingUI = null;
             ug.OnEndLocalRound();
         });
@@ -512,13 +528,14 @@ var WizardGUI = /** @class */ (function (_super) {
 }(CardGame_1.BaseGameGUI));
 var Wizard = /** @class */ (function (_super) {
     __extends(Wizard, _super);
-    function Wizard(port) {
-        var _this = _super.call(this, port) || this;
-        _this.name = "Wizard";
+    function Wizard(info) {
+        var _this = _super.call(this, info) || this;
+        _this.gameType = "Wizard";
         _this.isSetup = false;
         _this.roundCount = 0;
         _this.maxRoundCount = 1;
         _this.hadPlayedSinceReset = false;
+        _this.gameType = "Wizard";
         _this.bIsSuspended = false;
         return _this;
     }
@@ -533,10 +550,10 @@ var Wizard = /** @class */ (function (_super) {
                     playerWon = this.players[i].GetID();
                 }
             }
-            return (playerWon == this.localPlayer.GetID()) ? CardGame_1.GameState.Won : CardGame_1.GameState.Lost;
+            return (playerWon == this.localPlayer.GetID()) ? svebaselib_1.GameState.Won : svebaselib_1.GameState.Lost;
         }
         // else state is Undetermined
-        return CardGame_1.GameState.Undetermined;
+        return svebaselib_1.GameState.Undetermined;
     };
     Wizard.prototype.StartLocalPlayersRound = function () {
         var _this = this;
@@ -545,7 +562,7 @@ var Wizard = /** @class */ (function (_super) {
             this.bIsSuspended = false;
             if (this.IsHostInstance()) {
                 this.players.forEach(function (p) {
-                    _this.NotifyPlayer(p, "reset!");
+                    _this.NotifyPlayer(p, "!reset");
                 });
             }
             else {
@@ -569,17 +586,20 @@ var Wizard = /** @class */ (function (_super) {
                     player.SetRoundPoints(player.GetRoundPoints() + 1);
                 }
                 console.log("Get next trump!");
-                this.Deck.Socket = this.Socket;
-                this.Deck.GameID = this.gameID;
+                this.Deck.Game = this;
                 this.Deck.RevealTrumpCard();
                 this.players.forEach(function (p) {
-                    _this.Socket.send(JSON.stringify({
-                        type: "updatePlayer",
-                        id: _this.gameID,
-                        player: p.GetID(),
-                        field: "trumpCard",
-                        value: _this.Deck.GetTrumpCard()
-                    }));
+                    _this.sendGameRequest({
+                        invoker: "",
+                        target: {
+                            type: svebaselib_1.TargetType.Player,
+                            id: p.getName()
+                        },
+                        action: {
+                            field: "TrumpCard",
+                            value: _this.Deck.GetTrumpCard()
+                        }
+                    });
                 });
             }
             this.hadPlayedSinceReset = true;
@@ -605,11 +625,10 @@ var Wizard = /** @class */ (function (_super) {
         _super.prototype.StartGame.call(this);
         this.bIsSuspended = false;
         if (this.bIsHosting) {
-            this.Deck.Socket = this.Socket;
-            this.Deck.GameID = this.gameID;
+            this.Deck.Game = this;
             this.SetInitialCardCount(1);
             this.players.forEach(function (p) {
-                _this.NotifyPlayer(p, "reset!");
+                _this.NotifyPlayer(p, "!reset");
             });
         }
     };
@@ -624,16 +643,15 @@ var Wizard = /** @class */ (function (_super) {
     };
     Wizard.prototype.Tick = function () {
     };
-    Wizard.prototype.AddPlayer = function (id, isLocal, player) {
+    Wizard.prototype.AddPlayer = function (user, isLocal, player) {
         if (player === void 0) { player = null; }
-        _super.prototype.AddPlayer.call(this, id, isLocal, new WizardPlayer(id, 1, isLocal, this.scene));
+        _super.prototype.AddPlayer.call(this, user, isLocal, new WizardPlayer(user, 1, isLocal, this.scene));
         if (isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
-        this.Deck.GameID = this.gameID;
-        this.Deck.Socket = this.Socket;
+        this.Deck.Game = this;
         this.GUI.GameID = this.gameID;
-        this.GUI.Socket = this.Socket;
+        this.GUI.Game = this;
     };
     Wizard.prototype.OnServerResponse = function (result) {
         var _this = this;
@@ -668,11 +686,13 @@ var Wizard = /** @class */ (function (_super) {
                         else {
                             this.lastPlayerBeganID = this.players[Math.round(Math.random() * (this.players.length - 1))].GetID();
                         }
-                        this.Socket.send(JSON.stringify({
-                            type: "setTurn",
-                            player: this.lastPlayerBeganID,
-                            id: this.gameID
-                        }));
+                        this.sendGameRequest({
+                            action: {
+                                field: "!setTurn",
+                                value: this.lastPlayerBeganID,
+                            },
+                            invoker: String(this.GetLocalPlayerID())
+                        });
                     }
                 }
             }
@@ -741,7 +761,7 @@ var Wizard = /** @class */ (function (_super) {
             return;
         }
         if (result.type == "notifyPlayer") {
-            if (result.notification == "reset!") {
+            if (result.notification == "!reset") {
                 this.lastPlayerBeganID = "";
                 this.hadPlayedSinceReset = false;
                 this.roundCount++;
@@ -751,8 +771,7 @@ var Wizard = /** @class */ (function (_super) {
                 }
                 console.log("Start round: " + this.roundCount);
                 if (this.bIsHosting) {
-                    this.Deck.Socket = this.Socket;
-                    this.Deck.GameID = this.gameID;
+                    this.Deck.Game = this;
                     this.Deck.ResetPlayedCards();
                     if (this.roundCount > 1) {
                         this.players.forEach(function (p) {
@@ -764,13 +783,11 @@ var Wizard = /** @class */ (function (_super) {
                     }
                     setTimeout(function () {
                         _this.players.forEach(function (p) {
-                            p.Socket = _this.Socket;
-                            p.GameID = _this.gameID;
+                            p.Game = _this;
                             p.drawNumberOfCards(_this.Deck.GetDrawStack(), _this.roundCount);
                         });
                         console.log("Reveal trump!");
-                        _this.Deck.Socket = _this.Socket;
-                        _this.Deck.GameID = _this.gameID;
+                        _this.Deck.Game = _this;
                         _this.Deck.RevealTrumpCard();
                         if (_this.roundCount == 1) {
                             console.log("Prepare first round host:");
@@ -800,18 +817,16 @@ var Wizard = /** @class */ (function (_super) {
                     stack = this.Deck.GetStacks()[0];
                 }
                 if (stack != null) {
-                    stack.Socket = this.Socket;
-                    stack.GameID = this.gameID;
+                    stack.Game = this;
                     stack.PlayCardOnStack(this.localPlayer);
                     this.OnEndLocalRound();
                 }
             }
         }
         var gameState = this.CheckGameState();
-        if (gameState != CardGame_1.GameState.Undetermined) {
+        if (gameState != svebaselib_1.GameState.Undetermined) {
             this.GUI.ShowGameState(gameState);
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
             this.localPlayer.SetGameState(gameState);
             this.EndGame();
         }

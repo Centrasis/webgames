@@ -32,11 +32,12 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CardGame = exports.BaseGameGUI = exports.VotingUI = exports.PlayerListUI = exports.GameState = exports.Player = exports.BaseCardDeck = exports.CardStack = exports.StackType = exports.StackDirection = exports.Card = exports.PlayerGamePhase = void 0;
+exports.CardGame = exports.BaseGameGUI = exports.VotingUI = exports.PlayerListUI = exports.Player = exports.BaseCardDeck = exports.CardStack = exports.StackType = exports.StackDirection = exports.Card = exports.PlayerGamePhase = void 0;
 var BABYLON = __importStar(require("babylonjs"));
 var GUI = __importStar(require("babylonjs-gui"));
 var BaseGame_1 = __importStar(require("./BaseGame"));
 var util_1 = require("util");
+var svebaselib_1 = require("svebaselib");
 var PlayerGamePhase;
 (function (PlayerGamePhase) {
     PlayerGamePhase[PlayerGamePhase["Spectating"] = 0] = "Spectating";
@@ -214,16 +215,20 @@ var CardStack = /** @class */ (function () {
     /** Does replicate */
     CardStack.prototype.addCard = function (card, previousOwner, shouldReveal) {
         if (shouldReveal === void 0) { shouldReveal = true; }
-        if (!util_1.isUndefined(this.Socket)) {
-            this.Socket.send(JSON.stringify({
-                type: "playCard",
-                id: this.GameID,
-                card: card.GetMesh().name,
-                stack: this.GetID(),
-                player: (previousOwner == null) ? "" : previousOwner.GetID(),
-                revealed: shouldReveal
-            }));
-        }
+        this.Game.sendGameRequest({
+            action: {
+                field: "!playCard",
+                value: {
+                    card: card.GetMesh().name,
+                    revealed: shouldReveal
+                },
+            },
+            invoker: (previousOwner == null) ? "" : previousOwner.getName(),
+            target: {
+                type: svebaselib_1.TargetType.Entity,
+                id: String(this.GetID())
+            }
+        });
         this.addCardLocal(card, shouldReveal);
     };
     CardStack.prototype.GetCard = function (pick) {
@@ -307,8 +312,7 @@ var BaseCardDeck = /** @class */ (function () {
         if (player === null) {
             return;
         }
-        stack.Socket = this.Socket;
-        stack.GameID = this.GameID;
+        stack.Game = this.Game;
         stack.PlayCardOnStack(player);
     };
     BaseCardDeck.prototype.GetStackFromPick = function (pick) {
@@ -321,14 +325,16 @@ var BaseCardDeck = /** @class */ (function () {
     return BaseCardDeck;
 }());
 exports.BaseCardDeck = BaseCardDeck;
-var Player = /** @class */ (function () {
-    function Player(id, maxCardCount, isLocal) {
-        this.phase = PlayerGamePhase.Spectating;
-        this.isLocal = isLocal;
-        this.id = id;
-        this.maxCardCount = maxCardCount;
-        this.cards = [];
-        this.cardOrigin = new BABYLON.Vector3(0, 1, -6);
+var Player = /** @class */ (function (_super) {
+    __extends(Player, _super);
+    function Player(decoratee, maxCardCount, isLocal) {
+        var _this = _super.call(this, decoratee.getInitializer(), function (u) { }) || this;
+        _this.phase = PlayerGamePhase.Spectating;
+        _this.isLocal = isLocal;
+        _this.maxCardCount = maxCardCount;
+        _this.cards = [];
+        _this.cardOrigin = new BABYLON.Vector3(0, 1, -6);
+        return _this;
     }
     Player.prototype.GetPhase = function () {
         return this.phase;
@@ -337,13 +343,17 @@ var Player = /** @class */ (function () {
         this.phase = p;
     };
     Player.prototype.commitToServer = function () {
-        this.Socket.send(JSON.stringify({
-            type: "updatePlayer",
-            id: this.GameID,
-            player: this.GetID(),
-            field: "maxCardCount",
-            value: this.maxCardCount
-        }));
+        this.Game.sendGameRequest({
+            action: {
+                field: "maxCardCount",
+                value: this.maxCardCount
+            },
+            invoker: this.getName(),
+            target: {
+                type: svebaselib_1.TargetType.Player,
+                id: this.getName()
+            }
+        });
     };
     /** No replication */
     Player.prototype.dropCards = function () {
@@ -354,7 +364,7 @@ var Player = /** @class */ (function () {
         this.bHasTurn = val;
     };
     Player.prototype.GetID = function () {
-        return this.id;
+        return this.name;
     };
     Player.prototype.SetMaxCardCount = function (count) {
         this.maxCardCount = count;
@@ -448,12 +458,17 @@ var Player = /** @class */ (function () {
     /** Replicates */
     Player.prototype.AddCard = function (card) {
         this.AddCardLocal(card);
-        this.Socket.send(JSON.stringify({
-            type: "drawCard",
-            id: this.GameID,
-            player: this.GetID(),
-            card: card.GetMesh().name
-        }));
+        this.Game.sendGameRequest({
+            action: {
+                field: "!drawCard",
+                value: card.GetMesh().name
+            },
+            invoker: this.getName(),
+            target: {
+                type: svebaselib_1.TargetType.Player,
+                id: this.getName()
+            }
+        });
     };
     Player.prototype.AddCardLocal = function (card) {
         this.cards.push(card);
@@ -466,27 +481,26 @@ var Player = /** @class */ (function () {
     };
     Player.prototype.SetGameState = function (gs) {
         this.gameState = gs;
-        if (gs != GameState.Undetermined) {
-            this.Socket.send(JSON.stringify({
-                type: "gameState",
-                id: this.GameID,
-                player: this.GetID(),
-                value: (gs == GameState.Won) ? "won" : "lost",
-            }));
+        if (gs != svebaselib_1.GameState.Undetermined) {
+            this.Game.sendGameRequest({
+                action: {
+                    field: "gameState",
+                    value: gs
+                },
+                invoker: this.getName(),
+                target: {
+                    type: svebaselib_1.TargetType.Game,
+                    id: ""
+                }
+            });
         }
     };
     Player.prototype.GetGameState = function () {
         return this.gameState;
     };
     return Player;
-}());
+}(svebaselib_1.SVEAccount));
 exports.Player = Player;
-var GameState;
-(function (GameState) {
-    GameState[GameState["Undetermined"] = 0] = "Undetermined";
-    GameState[GameState["Won"] = 1] = "Won";
-    GameState[GameState["Lost"] = 2] = "Lost";
-})(GameState = exports.GameState || (exports.GameState = {}));
 var PlayerListUI = /** @class */ (function () {
     function PlayerListUI(GUI) {
         this.GUI = GUI;
@@ -591,16 +605,14 @@ var BaseGameGUI = /** @class */ (function () {
 exports.BaseGameGUI = BaseGameGUI;
 var CardGame = /** @class */ (function (_super) {
     __extends(CardGame, _super);
-    function CardGame(port) {
-        var _this = _super.call(this) || this;
+    function CardGame(info) {
+        var _this = _super.call(this, info) || this;
         _this.enableZMovement = false;
         _this.players = [];
         _this.playDirection = 1;
         _this.bIsRunning = false;
         _this.bIsHosting = false;
-        _this.port = port;
         _this.localPlayer = null;
-        _this.Socket = null;
         _this.Deck = null;
         _this.GUI = null;
         return _this;
@@ -616,8 +628,7 @@ var CardGame = /** @class */ (function (_super) {
         var _this = this;
         this.players.forEach(function (player) {
             player.SetMaxCardCount(cardsCount);
-            player.Socket = _this.Socket;
-            player.GameID = _this.gameID;
+            player.Game = _this;
             player.commitToServer();
         });
     };
@@ -626,10 +637,14 @@ var CardGame = /** @class */ (function (_super) {
         this.scene.onPointerDown = this.OnSelect.bind(this);
         this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
         if (this.bIsHosting) {
-            this.Socket.send(JSON.stringify({
-                type: "startGame",
-                id: this.gameID
-            }));
+            this.sendGameRequest({
+                action: "!startGame",
+                invoker: this.localPlayer.getName(),
+                target: {
+                    type: svebaselib_1.TargetType.Game,
+                    id: ""
+                }
+            });
         }
     };
     CardGame.prototype.IsRunning = function () {
@@ -765,83 +780,91 @@ var CardGame = /** @class */ (function (_super) {
         }
     };
     CardGame.prototype.GiveUp = function () {
-        this.Socket.send(JSON.stringify({
-            type: "gameState",
-            id: this.gameID,
-            value: "lost"
-        }));
+        this.sendGameRequest({
+            action: {
+                field: "gameState",
+                value: svebaselib_1.GameState.Lost
+            },
+            invoker: String(this.GetLocalPlayerID()),
+            target: {
+                id: "",
+                type: svebaselib_1.TargetType.Game
+            }
+        });
         this.EndGame();
     };
     CardGame.prototype.InvokeNextPlayerRound = function () {
         console.log("Invoke next round");
-        this.Socket.send(JSON.stringify({
-            type: "nextTurn",
-            id: this.gameID,
-            playDirection: this.playDirection,
-            player: this.localPlayer.GetID()
-        }));
+        this.sendGameRequest({
+            action: {
+                field: "!nextTurn",
+                value: this.playDirection
+            },
+            invoker: this.localPlayer.getName(),
+            target: {
+                type: svebaselib_1.TargetType.Game,
+                id: ""
+            }
+        });
     };
-    CardGame.prototype.AddPlayer = function (id, isLocal, player) {
+    CardGame.prototype.AddPlayer = function (user, isLocal, player) {
         if (player === void 0) { player = null; }
         if (isLocal) {
-            console.log("On add new local player: " + id);
+            console.log("On add new local player: " + user.getName());
         }
         else {
-            console.log("On add new remote player: " + id);
+            console.log("On add new remote player: " + user.getName());
         }
         if (player == null)
-            player = new Player(id, 6, isLocal);
+            player = new Player(user, 6, isLocal);
         this.GUI.PlayerList.AddPlayer(player);
         if (isLocal) {
             this.localPlayer = player;
             this.localPlayer.camera = this.camera;
-            this.localPlayer.Socket = this.Socket;
-            this.localPlayer.GameID = this.gameID;
+            this.localPlayer.Game = this;
         }
         this.players.push(player);
-        if (isLocal) {
-            var str = window.location.hostname;
-            this.Socket = new WebSocket("wss://" + str + ":" + this.port + "/" + this.name);
-            var self = this;
-            this.Socket.onopen = function () {
-                self.Socket.send(JSON.stringify({
-                    type: "addPlayer",
-                    name: player.GetID(),
-                    id: self.gameID
-                }));
-            };
-            this.Socket.onmessage = function (e) {
-                var result = JSON.parse(e.data);
-                self.OnServerResponse(result);
-            };
-            this.Socket.onclose = function (e) {
-                console.log("Socket closed reason: " + e.reason);
-                self.bIsRunning = false;
-                self.OnSelect(null, null);
-            };
-        }
-        player.Socket = this.Socket;
-        player.GameID = this.gameID;
+        player.Game = this;
         this.OnNewPlayer();
+    };
+    CardGame.prototype.onJoined = function () {
+        console.log("Card game joined!");
+    };
+    CardGame.prototype.onRequest = function (req) {
+        this.OnServerResponse(req);
+    };
+    CardGame.prototype.onEnd = function () {
+        console.log("Socket closed!");
+        this.bIsRunning = false;
+        this.OnSelect(null, null);
     };
     CardGame.prototype.UpdateGameDirection = function (dir) {
         this.playDirection = dir;
-        this.Socket.send(JSON.stringify({
-            type: "updateGame",
-            playDirection: dir,
-            id: this.gameID
-        }));
+        this.sendGameRequest({
+            action: {
+                field: "playDirection",
+                value: this.playDirection
+            },
+            invoker: this.localPlayer.getName(),
+            target: {
+                type: svebaselib_1.TargetType.Game,
+                id: ""
+            }
+        });
     };
     // player null means the next one
     CardGame.prototype.NotifyPlayer = function (player, notification) {
-        this.Socket.send(JSON.stringify({
-            type: "notifyPlayer",
-            id: this.gameID,
-            origin: this.localPlayer.GetID(),
-            playDirection: this.playDirection,
-            notification: notification,
-            target: (player != null) ? player.GetID() : ""
-        }));
+        this.sendGameRequest({
+            action: {
+                field: "!notify",
+                value: notification
+            },
+            invoker: this.localPlayer.getName(),
+            target: {
+                type: svebaselib_1.TargetType.Player,
+                id: player.getName()
+            }
+        });
     };
     CardGame.prototype.GetLocalPlayDirection = function () {
         return this.playDirection;
@@ -865,7 +888,7 @@ var CardGame = /** @class */ (function (_super) {
             return;
         }
         if (result.type == "gameState") {
-            var gs = (result.value == "lost") ? GameState.Lost : GameState.Won;
+            var gs = (result.value == "lost") ? svebaselib_1.GameState.Lost : svebaselib_1.GameState.Won;
             if (result.player == this.localPlayer.GetID()) {
                 this.localPlayer.SetGameState(gs);
             }
@@ -893,8 +916,7 @@ var CardGame = /** @class */ (function (_super) {
                 this.players.forEach(function (p) {
                     if (p.GetID() == result.player) {
                         console.log("Play Card from player: " + result.player);
-                        _this.Deck.GameID = _this.gameID;
-                        _this.Deck.Socket = _this.Socket;
+                        _this.Deck.Game = _this;
                         _this.Deck.PlayCardByNameOnStack(result.stack, result.card, p, result.revealed);
                         _this.GUI.PlayerList.UpdatePlayer(p);
                     }
@@ -905,8 +927,7 @@ var CardGame = /** @class */ (function (_super) {
         if (result.type == "drawCard") {
             this.players.forEach(function (p) {
                 if (p.GetID() == result.player) {
-                    _this.Deck.GameID = _this.gameID;
-                    _this.Deck.Socket = _this.Socket;
+                    _this.Deck.Game = _this;
                     _this.Deck.GiveCardByNameTo(result.card, p);
                     _this.GUI.PlayerList.UpdatePlayer(p);
                 }
@@ -927,41 +948,6 @@ var CardGame = /** @class */ (function (_super) {
         }
         //console.log("Unknown response:" + JSON.stringify(result));
     };
-    CardGame.prototype.SetGameID = function (id, doHost) {
-        this.gameID = id;
-        this.bIsHosting = doHost;
-        var self = this;
-        var str = window.location.hostname;
-        var Socket = new WebSocket("wss://" + str + ":" + this.port + "/" + this.name);
-        Socket.onopen = function (e) {
-            console.log("Opened WebSocked for gaming! Greet server!");
-            if (self.bIsHosting) {
-                Socket.send(JSON.stringify({
-                    type: "newGame",
-                    id: self.gameID,
-                    gameType: self.name,
-                    maxPlayers: self.MaxPlayers()
-                }));
-            }
-            else {
-                Socket.send(JSON.stringify({
-                    type: "join",
-                    id: self.gameID
-                }));
-            }
-        };
-        Socket.onmessage = function (e) {
-            var result = JSON.parse(e.data);
-            if (result.type == "welcome") {
-                console.log("Server sended greetings!");
-                self.OnConnected(result.Succeeded);
-                if (!result.Succeeded) {
-                    self.OnGameRejected(BaseGame_1.GameRejectReason.GameNotPresent);
-                }
-            }
-        };
-        return true;
-    };
     CardGame.prototype.OnSelect = function (evt, pickInfo) {
         if (this.localPlayer == null)
             return;
@@ -974,11 +960,10 @@ var CardGame = /** @class */ (function (_super) {
         }
     };
     CardGame.prototype.EndGame = function () {
-        this.Socket.send(JSON.stringify({
-            type: "endGame",
-            id: this.gameID,
-            player: this.localPlayer.GetID()
-        }));
+        this.sendGameRequest({
+            action: "!endGame",
+            invoker: this.localPlayer.getName()
+        });
         this.bIsRunning = false;
         this.players.forEach(function (p) { p.SetPhase(PlayerGamePhase.Spectating); });
     };
