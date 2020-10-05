@@ -22,6 +22,9 @@ var BaseGame = /** @class */ (function (_super) {
     function BaseGame() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    BaseGame.prototype.MaxPlayers = function () {
+        return this.maxPlayers;
+    };
     return BaseGame;
 }(SVEGame));
 export default BaseGame;

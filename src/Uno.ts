@@ -1,12 +1,8 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import { GameRejectReason} from './BaseGame';
 import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
-import { isUndefined } from 'util';
-import { string } from 'prop-types';
 import { MixMaterial } from 'babylonjs-materials';
-import { CrossBlock } from 'babylonjs';
 import { SVEGame, GameState, GameInfo, SVEAccount } from 'svebaselib';
 
 enum CardType {

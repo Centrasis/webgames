@@ -15,10 +15,13 @@ export default abstract class BaseGame extends SVEGame {
     public abstract EndGame(): void;
     public abstract IsHostInstance(): Boolean;
     public abstract MinPlayers(): number;
-    public abstract MaxPlayers(): number;
     public abstract GetPlayersCount(): number;
     public abstract GiveUp(): void
     public OnConnected: (success: Boolean) => void;
     public OnNewPlayer: () => void;
     public OnGameRejected?: (reason: GameRejectReason) => void;
+
+    public MaxPlayers(): number {
+        return this.maxPlayers;
+    }
 }

@@ -38,7 +38,6 @@ declare class TheGame extends CardGame {
     OnServerResponse(result: any): void;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     MinPlayers(): number;
-    MaxPlayers(): number;
 }
 export { TheGame };
 //# sourceMappingURL=TheGame.d.ts.map

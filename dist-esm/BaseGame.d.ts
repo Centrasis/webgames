@@ -13,11 +13,11 @@ export default abstract class BaseGame extends SVEGame {
     abstract EndGame(): void;
     abstract IsHostInstance(): Boolean;
     abstract MinPlayers(): number;
-    abstract MaxPlayers(): number;
     abstract GetPlayersCount(): number;
     abstract GiveUp(): void;
     OnConnected: (success: Boolean) => void;
     OnNewPlayer: () => void;
     OnGameRejected?: (reason: GameRejectReason) => void;
+    MaxPlayers(): number;
 }
 //# sourceMappingURL=BaseGame.d.ts.map

@@ -457,10 +457,6 @@ class TheGame extends CardGame {
     public MinPlayers(): number {
         return 1;
     }
-
-    public MaxPlayers(): number {
-        return 5;
-    }
 }
 
 export { TheGame };

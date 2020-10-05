@@ -386,9 +386,6 @@ var TheGame = /** @class */ (function (_super) {
     TheGame.prototype.MinPlayers = function () {
         return 1;
     };
-    TheGame.prototype.MaxPlayers = function () {
-        return 5;
-    };
     return TheGame;
 }(CardGame));
 export { TheGame };
