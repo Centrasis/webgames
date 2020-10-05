@@ -807,9 +807,112 @@ var CardGame = /** @class */ (function (_super) {
     };
     CardGame.prototype.onJoined = function () {
         console.log("Card game joined!");
+        this.OnConnected(true);
+    };
+    CardGame.prototype.executeCommand = function (cmd, req) {
+        var _this = this;
+        if ("!join" == cmd) {
+            new SVEAccount({ id: Number(req.invoker) }, function (user) {
+                _this.AddPlayer(user, false);
+            });
+            return;
+        }
+        if ("!startGame" == cmd) {
+            if (req.invoker == this.host)
+                this.StartGame();
+            if (this.bIsRunning) {
+                this.OnSelect(null, null);
+            }
+            return;
+        }
+        if ("!notify" == cmd) {
+            console.log("Notify: " + req.action.value);
+            return;
+        }
+        if ("!endGame" == cmd) {
+            if (req.invoker == this.host)
+                this.EndGame();
+            if (this.bIsRunning) {
+                this.OnSelect(null, null);
+            }
+            return;
+        }
+        if ("!drawCard" == cmd) {
+            this.players.forEach(function (p) {
+                if (p.getName() == req.target.id) {
+                    _this.Deck.Game = _this;
+                    _this.Deck.GiveCardByNameTo(req.action.value, p);
+                    _this.GUI.PlayerList.UpdatePlayer(p);
+                }
+            });
+            return;
+        }
+        if ("!nextTurn" == cmd) {
+            if (this.localPlayer.getName() == req.target.id) {
+                this.StartLocalPlayersRound();
+            }
+            return;
+        }
+        if ("!playCard" == cmd) {
+            var result_1 = req.action.value;
+            if (req.invoker == "") {
+                this.Deck.PlayCardFromDeckOnStack(req.target.id, result_1.card, result_1.revealed);
+            }
+            else {
+                this.players.forEach(function (p) {
+                    if (p.getName() == req.invoker) {
+                        console.log("Play Card from player: " + req.invoker);
+                        _this.Deck.Game = _this;
+                        _this.Deck.PlayCardByNameOnStack(req.target.id, result_1.card, p, result_1.revealed);
+                        _this.GUI.PlayerList.UpdatePlayer(p);
+                    }
+                });
+            }
+            return;
+        }
     };
     CardGame.prototype.onRequest = function (req) {
-        this.OnServerResponse(req);
+        var _this = this;
+        if (typeof req.action === "string") {
+            if (req.action.startsWith("!")) {
+                if (req.target === undefined || req.target.type === TargetType.Game) {
+                    this.executeCommand(req.action, req);
+                }
+            }
+        }
+        else {
+            if (req.action.field.startsWith("!")) {
+                // execute action
+                this.executeCommand(req.action.field, req);
+            }
+            else {
+                // set field
+                if (req.target !== undefined) {
+                    if (req.target.type === TargetType.Game) {
+                        this[req.action.field] = req.action.value;
+                    }
+                    else {
+                        if (req.target.type === TargetType.Player) {
+                            this.players.forEach(function (p) {
+                                if (p.getName() === req.target.id) {
+                                    p[req.action.field] = req.action.value;
+                                    _this.GUI.PlayerList.UpdatePlayer(p);
+                                }
+                            });
+                        }
+                        else {
+                            if (req.target.type === TargetType.Entity) {
+                                this.Deck[req.action.field] = req.action.value;
+                            }
+                        }
+                    }
+                }
+                else {
+                    // default to game scope
+                    this[req.action.field] = req.action.value;
+                }
+            }
+        }
     };
     CardGame.prototype.onEnd = function () {
         console.log("Socket closed!");

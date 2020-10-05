@@ -1,8 +1,11 @@
 import * as BABYLON from 'babylonjs';
-import { SVEAccount, SVEGame } from 'svebaselib';
+import { GameRequest, SVEAccount, SVEGame } from 'svebaselib';
 export declare enum GameRejectReason {
     GameNotPresent = 0,
     PlayerLimitExceeded = 1
+}
+export interface Commandable {
+    executeCommand(cmd: string, req: GameRequest): any;
 }
 export default abstract class BaseGame extends SVEGame {
     abstract CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;

@@ -1,7 +1,7 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import BaseGame from './BaseGame';
+import BaseGame, { Commandable } from './BaseGame';
 import { SVEAccount, SVEGame, GameState, GameInfo, GameRequest } from 'svebaselib';
 export declare enum PlayerGamePhase {
     Spectating = 0,
@@ -148,7 +148,7 @@ export declare class BaseGameGUI {
     constructor(scene: BABYLON.Scene);
     RememberItsYourTurn(): void;
 }
-export declare abstract class CardGame extends BaseGame {
+export declare abstract class CardGame extends BaseGame implements Commandable {
     private playDirection;
     protected scene: BABYLON.Scene;
     protected camera: BABYLON.FreeCamera;
@@ -174,6 +174,7 @@ export declare abstract class CardGame extends BaseGame {
     InvokeNextPlayerRound(): void;
     AddPlayer(user: SVEAccount, isLocal: Boolean, player?: Player): void;
     onJoined(): void;
+    executeCommand(cmd: string, req: GameRequest): void;
     onRequest(req: GameRequest): void;
     onEnd(): void;
     UpdateGameDirection(dir: number): void;

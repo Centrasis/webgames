@@ -1,9 +1,9 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import BaseGame, {GameRejectReason} from './BaseGame';
+import BaseGame, {Commandable, GameRejectReason} from './BaseGame';
 import { isUndefined } from 'util';
-import { SessionUserInitializer, SVEAccount, SVEGame, GameState, TargetType, SetDataRequest, ActionTarget, GameInfo, GameRequest } from 'svebaselib';
+import { SessionUserInitializer, SVEAccount, SVEGame, GameState, TargetType, SetDataRequest, ActionTarget, GameInfo, GameRequest, BasicUserInitializer } from 'svebaselib';
 
 export enum PlayerGamePhase {
     Spectating,
@@ -711,7 +711,7 @@ export class BaseGameGUI {
     }
 }
 
-export abstract class CardGame extends BaseGame { 
+export abstract class CardGame extends BaseGame implements Commandable { 
     private playDirection: number;
     protected scene: BABYLON.Scene;
     protected camera: BABYLON.FreeCamera;
@@ -1001,10 +1001,112 @@ export abstract class CardGame extends BaseGame {
 
     public onJoined() {
         console.log("Card game joined!");
+        this.OnConnected(true);
+    }
+
+    public executeCommand(cmd: string, req: GameRequest) {
+        if("!join" == cmd) {
+            new SVEAccount({id: Number(req.invoker)} as BasicUserInitializer, (user) => {
+                this.AddPlayer(user, false);
+            });
+            return;
+        }
+
+        if("!startGame" == cmd) {
+            if (req.invoker == this.host)
+                this.StartGame();
+            if(this.bIsRunning) {
+                this.OnSelect(null, null);
+            }
+            return;
+        }
+
+        if("!notify" == cmd) {
+            console.log("Notify: " + (req.action as SetDataRequest).value);
+            return;
+        }
+
+        if("!endGame" == cmd) {
+            if (req.invoker == this.host)
+                this.EndGame();
+            if(this.bIsRunning) {
+                this.OnSelect(null, null);
+            }
+            return;
+        }
+
+        if("!drawCard" == cmd) {
+            this.players.forEach((p) => {
+                if (p.getName() == req.target.id) {
+                    this.Deck.Game = this;
+                    this.Deck.GiveCardByNameTo((req.action as SetDataRequest).value, p);
+                    this.GUI.PlayerList.UpdatePlayer(p);
+                }
+            });
+            return;
+        }
+
+        if("!nextTurn" == cmd) {
+            if (this.localPlayer.getName() == req.target.id) {
+                this.StartLocalPlayersRound();
+            }
+            return;
+        }
+
+        if("!playCard" == cmd) {
+            let result = (req.action as SetDataRequest).value;
+            if (req.invoker == "") {
+                this.Deck.PlayCardFromDeckOnStack(req.target.id, result.card, result.revealed);
+            } else {
+                this.players.forEach((p) => {
+                    if (p.getName() == req.invoker) {
+                        console.log("Play Card from player: " + req.invoker);
+                        this.Deck.Game = this;
+                        this.Deck.PlayCardByNameOnStack(req.target.id, result.card, p, result.revealed);
+                        this.GUI.PlayerList.UpdatePlayer(p);
+                    }
+                });
+            }
+            return;
+        }
     }
 
     public onRequest(req: GameRequest) {
-        this.OnServerResponse(req);
+        if (typeof req.action === "string") {
+            if (req.action.startsWith("!")) {
+                if (req.target === undefined || req.target.type === TargetType.Game) {
+                    this.executeCommand(req.action, req);
+                }
+            }
+        } else {
+            if (req.action.field.startsWith("!")) {
+                // execute action
+                this.executeCommand(req.action.field, req);
+            } else {
+                // set field
+                if (req.target !== undefined) {
+                    if (req.target.type === TargetType.Game) {
+                        (this as any)[req.action.field] = req.action.value;
+                    } else {
+                        if (req.target.type === TargetType.Player) {
+                            this.players.forEach(p => {
+                                if(p.getName() === req.target.id) {
+                                    (p as any)[(req.action as SetDataRequest).field] = (req.action as SetDataRequest).value;
+                                    this.GUI.PlayerList.UpdatePlayer(p);
+                                }
+                            });
+                        } else {
+                            if (req.target.type === TargetType.Entity) {
+                                (this.Deck as any)[(req.action as SetDataRequest).field] = (req.action as SetDataRequest).value;
+                            }
+                        }
+                    }
+                } else {
+                    // default to game scope
+                    (this as any)[req.action.field] = req.action.value;
+                }
+            }
+        }
     }
 
     public onEnd() {
