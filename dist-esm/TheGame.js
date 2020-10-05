@@ -312,11 +312,11 @@ var TheGame = /** @class */ (function (_super) {
         this.GUI.GameID = this.gameID;
         this.GUI.Game = this;
     };
-    TheGame.prototype.OnServerResponse = function (result) {
-        var _this = this;
-        _super.prototype.OnServerResponse.call(this, result);
-        if (result.type == "vote") {
+    TheGame.prototype.executeCommand = function (cmd, req) {
+        _super.prototype.executeCommand.call(this, cmd, req);
+        if ("!vote" == cmd) {
             if (this.bIsHosting) {
+                var result = req.action.value;
                 if (result.voteID == "PlayerStart") {
                     console.log("Got voting result for player start: " + result.value);
                     this.sendGameRequest({
@@ -330,35 +330,86 @@ var TheGame = /** @class */ (function (_super) {
             }
             return;
         }
-        if (result.type == "gameState") {
-            var gs = (result.value == "lost") ? GameState.Lost : GameState.Won;
-            this.GUI.ShowGameState(gs);
-            this.EndGame();
+    };
+    TheGame.prototype.onRequest = function (req) {
+        _super.prototype.onRequest.call(this, req);
+        if (typeof req.action !== "string") {
+            if (req.action.field == "gameState") {
+                if (this.gameState !== GameState.Undetermined) {
+                    this.GUI.ShowGameState(this.gameState);
+                    this.EndGame();
+                }
+                return;
+            }
+            if (req.action.field == "!nextTurn") {
+                this.GUI.PlayerList.SetPlayerActive(this.players.find(function (e) { return e.getName() == req.target.id; }));
+                this.GUI.UpdateCardCounter(this.Deck.GetNumberOfCardsInDeck());
+                if (req.target.id == this.localPlayer.getName()) {
+                    this.GUI.RememberItsYourTurn();
+                }
+                return;
+            }
+        }
+    };
+    /*
+    public OnServerResponse(result: any): void {
+        super.OnServerResponse(result);
+
+        if (result.type == "vote") {
+            if (this.bIsHosting) {
+                if (result.voteID == "PlayerStart") {
+                    console.log("Got voting result for player start: " + result.value);
+
+                    this.sendGameRequest({
+                        action: {
+                            field: "!setTurn",
+                            value: result.value,
+                        },
+                        invoker: String(this.GetLocalPlayerID())
+                    });
+                }
+            }
             return;
         }
+
+        if (result.type == "gameState") {
+            let gs: GameState = (result.value == "lost") ? GameState.Lost : GameState.Won;
+            
+            this.GUI.ShowGameState(gs);
+
+            this.EndGame();
+
+            return;
+        }
+
         if (result.type == "updatePlayer") {
             if (this.bIsHosting) {
-                this.players.forEach(function (p) {
-                    if (p.GetID() == result.player) {
+                this.players.forEach((p) => {
+                    if (p.GetID() == result.player)
+                    {
                         console.log("Initial draw card for: " + p.GetID());
-                        p.drawCards(_this.Deck.GetDrawStack());
+                        p.drawCards((<TheGameCardDeck>this.Deck).GetDrawStack());
                     }
                 });
             }
+
             if (this.bIsRunning)
                 this.OnSelect(null, null);
             return;
         }
+
         if (result.type == "nextTurn") {
-            this.GUI.PlayerList.SetPlayerActive(this.players.find(function (e) { return e.GetID() == result.player; }));
+            this.GUI.PlayerList.SetPlayerActive(this.players.find(e => e.GetID() == result.player));
             this.GUI.UpdateCardCounter(this.Deck.GetNumberOfCardsInDeck());
-            if (result.player == this.localPlayer.GetID()) {
+            if(result.player == this.localPlayer.GetID()) {
                 this.GUI.RememberItsYourTurn();
             }
             return;
         }
+
         console.log("Unknown response:" + JSON.stringify(result));
-    };
+    }
+    */
     TheGame.prototype.OnSelect = function (evt, pickInfo) {
         _super.prototype.OnSelect.call(this, evt, pickInfo);
         if (this.localPlayer == null)

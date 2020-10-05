@@ -4,7 +4,7 @@ import * as GUI from 'babylonjs-gui';
 import { GameRejectReason} from './BaseGame';
 import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
 import { isUndefined } from 'util';
-import { SVEGame, GameState, GameInfo, SVEAccount } from 'svebaselib';
+import { SVEGame, GameState, GameInfo, SVEAccount, GameRequest, SetDataRequest } from 'svebaselib';
 
 class TheGameCardDeck extends BaseCardDeck {
 
@@ -365,6 +365,52 @@ class TheGame extends CardGame {
         this.GUI.Game = this;
     }
 
+    public executeCommand(cmd: string, req: GameRequest) {
+        super.executeCommand(cmd, req);
+
+        if("!vote" == cmd) {
+            if (this.bIsHosting) {
+                let result = (req.action as SetDataRequest).value;
+                if (result.voteID == "PlayerStart") {
+                    console.log("Got voting result for player start: " + result.value);
+
+                    this.sendGameRequest({
+                        action: {
+                            field: "!setTurn",
+                            value: result.value,
+                        },
+                        invoker: String(this.GetLocalPlayerID())
+                    });
+                }
+            }
+            return;
+        }
+    }
+
+    public onRequest(req: GameRequest) {
+        super.onRequest(req);
+
+        if(typeof req.action !== "string") {
+            if(req.action.field == "gameState") {
+                if(this.gameState !== GameState.Undetermined) {
+                    this.GUI.ShowGameState(this.gameState);
+                    this.EndGame();
+                }
+                return;
+            }
+
+            if (req.action.field == "!nextTurn") {
+                this.GUI.PlayerList.SetPlayerActive(this.players.find(e => e.getName() == req.target.id));
+                this.GUI.UpdateCardCounter(this.Deck.GetNumberOfCardsInDeck());
+                if(req.target.id == this.localPlayer.getName()) {
+                    this.GUI.RememberItsYourTurn();
+                }
+                return;
+            }
+        }
+    }
+
+    /*
     public OnServerResponse(result: any): void {
         super.OnServerResponse(result);
 
@@ -422,6 +468,7 @@ class TheGame extends CardGame {
 
         console.log("Unknown response:" + JSON.stringify(result));
     }
+    */
 
     public OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo) {
         super.OnSelect(evt, pickInfo);

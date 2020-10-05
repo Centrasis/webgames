@@ -13,7 +13,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 import * as BABYLON from 'babylonjs';
 import * as GUI from 'babylonjs-gui';
-import BaseGame, { GameRejectReason } from './BaseGame';
+import BaseGame from './BaseGame';
 import { isUndefined } from 'util';
 import { SVEAccount, GameState, TargetType } from 'svebaselib';
 export var PlayerGamePhase;
@@ -954,11 +954,11 @@ var CardGame = /** @class */ (function (_super) {
         return this.localPlayer.GetID();
     };
     CardGame.prototype.OnServerResponse = function (result) {
-        var _this = this;
-        if (result.type == "addPlayer") {
+        /*if (result.type == "addPlayer") {
             this.AddPlayer(result.player, false);
             return;
         }
+
         if (result.type == "PlayerWelcome") {
             if (result.Succeeded) {
                 // nothing to do
@@ -966,68 +966,82 @@ var CardGame = /** @class */ (function (_super) {
             else {
                 this.OnGameRejected(GameRejectReason.PlayerLimitExceeded);
             }
+            
             return;
         }
+
         if (result.type == "gameState") {
-            var gs = (result.value == "lost") ? GameState.Lost : GameState.Won;
+            let gs: GameState = (result.value == "lost") ? GameState.Lost : GameState.Won;
+            
             if (result.player == this.localPlayer.GetID()) {
                 this.localPlayer.SetGameState(gs);
             }
+
             return;
         }
+
         if (result.type == "updatePlayer") {
-            this.players.forEach(function (p) {
-                if (p.GetID() == result.player) {
+            this.players.forEach(p => {
+                if(p.GetID() == result.player) {
                     if (result.field == "maxCardCount")
                         p.SetMaxCardCount(result.value);
-                    _this.GUI.PlayerList.UpdatePlayer(p);
+                    this.GUI.PlayerList.UpdatePlayer(p);
                 }
             });
+
             return;
         }
+
         if (result.type == "updateGame") {
             this.playDirection = result.playDirection;
+
             return;
         }
+
         if (result.type == "playCard") {
             if (result.player == "") {
                 this.Deck.PlayCardFromDeckOnStack(result.stack, result.card, result.revealed);
-            }
-            else {
-                this.players.forEach(function (p) {
+            } else {
+                this.players.forEach((p) => {
                     if (p.GetID() == result.player) {
                         console.log("Play Card from player: " + result.player);
-                        _this.Deck.Game = _this;
-                        _this.Deck.PlayCardByNameOnStack(result.stack, result.card, p, result.revealed);
-                        _this.GUI.PlayerList.UpdatePlayer(p);
+                        this.Deck.Game = this;
+                        this.Deck.PlayCardByNameOnStack(result.stack, result.card, p, result.revealed);
+                        this.GUI.PlayerList.UpdatePlayer(p);
                     }
                 });
             }
             return;
         }
+
         if (result.type == "drawCard") {
-            this.players.forEach(function (p) {
+            this.players.forEach((p) => {
                 if (p.GetID() == result.player) {
-                    _this.Deck.Game = _this;
-                    _this.Deck.GiveCardByNameTo(result.card, p);
-                    _this.GUI.PlayerList.UpdatePlayer(p);
+                    this.Deck.Game = this;
+                    this.Deck.GiveCardByNameTo(result.card, p);
+                    this.GUI.PlayerList.UpdatePlayer(p);
                 }
             });
             return;
         }
+
         if (result.type == "startGame") {
             this.StartGame();
             if (this.bIsRunning)
                 this.OnSelect(null, null);
             return;
         }
+
         if (result.type == "nextTurn") {
             if (this.localPlayer.GetID() == result.player) {
                 this.StartLocalPlayersRound();
             }
+    
             return;
         }
+
         //console.log("Unknown response:" + JSON.stringify(result));
+        */
     };
     CardGame.prototype.OnSelect = function (evt, pickInfo) {
         if (this.localPlayer == null)

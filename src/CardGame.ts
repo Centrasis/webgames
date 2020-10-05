@@ -1154,7 +1154,7 @@ export abstract class CardGame extends BaseGame implements Commandable {
     }
 
     public OnServerResponse(result: any): void {
-        if (result.type == "addPlayer") {
+        /*if (result.type == "addPlayer") {
             this.AddPlayer(result.player, false);
             return;
         }
@@ -1241,6 +1241,7 @@ export abstract class CardGame extends BaseGame implements Commandable {
         }
 
         //console.log("Unknown response:" + JSON.stringify(result));
+        */
     }
 
     public OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo) {

@@ -2,7 +2,7 @@ import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, CardGame, Player, VotingUI } from './CardGame';
-import { SVEGame, GameState, GameInfo, SVEAccount } from 'svebaselib';
+import { SVEGame, GameState, GameInfo, SVEAccount, GameRequest } from 'svebaselib';
 declare class TheGameGUI extends BaseGameGUI {
     protected EndRoundBtn: GUI.Button;
     protected GameStateText: GUI.TextBlock;
@@ -35,7 +35,8 @@ declare class TheGame extends CardGame {
     protected CreateMaterialForCard(nb: number): void;
     Tick(): void;
     AddPlayer(id: SVEAccount, isLocal: Boolean, player?: Player): void;
-    OnServerResponse(result: any): void;
+    executeCommand(cmd: string, req: GameRequest): void;
+    onRequest(req: GameRequest): void;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     MinPlayers(): number;
 }
