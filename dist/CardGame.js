@@ -836,6 +836,7 @@ var CardGame = /** @class */ (function (_super) {
     };
     CardGame.prototype.executeCommand = function (cmd, req) {
         var _this = this;
+        console.log("Execute command: " + cmd);
         if ("!join" == cmd) {
             new svebaselib_1.SVEAccount({ id: Number(req.invoker) }, function (user) {
                 _this.AddPlayer(user, false);

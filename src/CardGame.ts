@@ -1005,6 +1005,7 @@ export abstract class CardGame extends BaseGame implements Commandable {
     }
 
     public executeCommand(cmd: string, req: GameRequest) {
+        console.log("Execute command: " + cmd);
         if("!join" == cmd) {
             new SVEAccount({id: Number(req.invoker)} as BasicUserInitializer, (user) => {
                 this.AddPlayer(user, false);
