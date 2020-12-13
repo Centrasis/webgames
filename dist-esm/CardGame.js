@@ -861,19 +861,21 @@ var CardGame = /** @class */ (function (_super) {
         }
     };
     CardGame.prototype.UpdateGameDirection = function (dir) {
-        this.playDirection = dir;
-        this.sendGameRequest({
-            action: {
-                field: "!playDirection",
-                value: this.playDirection
-            },
-            invoker: this.localPlayer.getName(),
-            target: {
-                type: TargetType.Game,
-                id: ""
-            }
-        });
-        this.onGameDirectionChanged();
+        if (this.playDirection !== dir) {
+            this.playDirection = dir;
+            this.sendGameRequest({
+                action: {
+                    field: "!playDirection",
+                    value: this.playDirection
+                },
+                invoker: this.localPlayer.getName(),
+                target: {
+                    type: TargetType.Game,
+                    id: ""
+                }
+            });
+            this.onGameDirectionChanged();
+        }
     };
     CardGame.prototype.onGameDirectionChanged = function () {
     };

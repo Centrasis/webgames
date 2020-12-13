@@ -926,7 +926,7 @@ export abstract class CardGame extends BaseGame {
         console.log("Invoke next round");
         if (this.IsHostInstance()) {
             this.SetGameState(this.CheckGameState());
-            
+
             this.playerIndexThatHasTurn += this.playDirection;
             if (this.playerIndexThatHasTurn < 0) {
                 this.playerIndexThatHasTurn = this.players.length - 1;
@@ -1051,19 +1051,21 @@ export abstract class CardGame extends BaseGame {
     }
 
     public UpdateGameDirection(dir: number): void {
-        this.playDirection = dir;
-        this.sendGameRequest({
-            action: { 
-                field: "!playDirection",
-                value: this.playDirection
-            },
-            invoker: this.localPlayer.getName(),
-            target: {
-                type: TargetType.Game,
-                id: ""
-            }
-        });
-        this.onGameDirectionChanged();
+        if(this.playDirection !== dir) {
+            this.playDirection = dir;
+            this.sendGameRequest({
+                action: { 
+                    field: "!playDirection",
+                    value: this.playDirection
+                },
+                invoker: this.localPlayer.getName(),
+                target: {
+                    type: TargetType.Game,
+                    id: ""
+                }
+            });
+            this.onGameDirectionChanged();
+        }
     }
 
     protected onGameDirectionChanged() {

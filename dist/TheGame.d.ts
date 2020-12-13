@@ -25,6 +25,7 @@ declare class TheGame extends CardGame {
     gameType: string;
     protected CardMaterails: Map<number, Materials.MixMaterial>;
     protected GUI: TheGameGUI;
+    protected votesList: any[];
     constructor(info: GameInfo);
     CheckGameState(): GameState;
     StartLocalPlayersRound(): void;

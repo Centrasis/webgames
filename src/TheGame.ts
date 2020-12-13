@@ -208,6 +208,7 @@ class TheGame extends CardGame {
     public gameType = "TheGame";
     protected CardMaterails: Map<number, Materials.MixMaterial>;
     protected GUI: TheGameGUI;
+    protected votesList: any[] = [];
 
     constructor (info: GameInfo) {
         super(info);
@@ -287,6 +288,7 @@ class TheGame extends CardGame {
 
     public ShowVotePlayerStartGUI() {
         console.log("Vote for the player to start.");
+        this.votesList = []
         this.GUI.Game = this;
         this.GUI.GameID = this.gameID;
         this.GUI.ShowVotePlayerStart();
@@ -372,19 +374,44 @@ class TheGame extends CardGame {
             if("!vote" == req.action.field) {
                 if (this.IsHostInstance()) {
                     let result = req.action.value;
-                    if (result.voteID == "PlayerStart") {
-                        console.log("Got voting result for player start: " + result.value);
+                    this.votesList.push(result.value);
+                    if (result.voteID == "PlayerStart" && this.votesList.length == this.players.length) {
+                        let s = new Set(this.votesList);
+                        let c = 0;
+                        let res = s[0];
+                        for (let i = 0; i < s.size; i++) {
+                            let c1 = this.votesList.filter(v => v == s[i]).length;
+                            if (c1 > c) {
+                                c = c1;
+                                res = s[i];
+                            }
+                        } 
+                        console.log("Got voting result for player start: " + res);
     
                         this.sendGameRequest({
                             action: {
                                 field: "!setTurn",
-                                value: result.value,
+                                value: res,
                             },
                             invoker: String(this.GetLocalPlayerID())
                         });
                     }
                 }
                 return;
+            }
+
+            if("!setTurn" == req.action.field && this.IsHostInstance()) {
+                this.playerIndexThatHasTurn = this.players.findIndex(p => p.getName() == (req.action as SetDataRequest).value as string) - 1;
+                if (this.playerIndexThatHasTurn < -1) {
+                    this.playerIndexThatHasTurn = this.players.length - 2;
+                } else {
+                    if(this.playerIndexThatHasTurn > this.players.length - 1) {
+                        this.playerIndexThatHasTurn = -1;
+                    }
+                }
+
+                this.UpdateGameDirection(1);
+                this.InvokeNextPlayerRound();
             }
         }
     }

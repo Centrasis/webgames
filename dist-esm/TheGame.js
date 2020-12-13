@@ -183,6 +183,7 @@ var TheGame = /** @class */ (function (_super) {
     function TheGame(info) {
         var _this = _super.call(this, info) || this;
         _this.gameType = "TheGame";
+        _this.votesList = [];
         _this.gameType = "TheGame";
         return _this;
     }
@@ -255,6 +256,7 @@ var TheGame = /** @class */ (function (_super) {
     };
     TheGame.prototype.ShowVotePlayerStartGUI = function () {
         console.log("Vote for the player to start.");
+        this.votesList = [];
         this.GUI.Game = this;
         this.GUI.GameID = this.gameID;
         this.GUI.ShowVotePlayerStart();
@@ -318,18 +320,46 @@ var TheGame = /** @class */ (function (_super) {
             if ("!vote" == req.action.field) {
                 if (this.IsHostInstance()) {
                     var result = req.action.value;
-                    if (result.voteID == "PlayerStart") {
-                        console.log("Got voting result for player start: " + result.value);
+                    this.votesList.push(result.value);
+                    if (result.voteID == "PlayerStart" && this.votesList.length == this.players.length) {
+                        var s_1 = new Set(this.votesList);
+                        var c = 0;
+                        var res = s_1[0];
+                        var _loop_2 = function (i) {
+                            var c1 = this_2.votesList.filter(function (v) { return v == s_1[i]; }).length;
+                            if (c1 > c) {
+                                c = c1;
+                                res = s_1[i];
+                            }
+                        };
+                        var this_2 = this;
+                        for (var i = 0; i < s_1.size; i++) {
+                            _loop_2(i);
+                        }
+                        console.log("Got voting result for player start: " + res);
                         this.sendGameRequest({
                             action: {
                                 field: "!setTurn",
-                                value: result.value,
+                                value: res,
                             },
                             invoker: String(this.GetLocalPlayerID())
                         });
                     }
                 }
                 return;
+            }
+            if ("!setTurn" == req.action.field && this.IsHostInstance()) {
+                this.playerIndexThatHasTurn = this.players.findIndex(function (p) { return p.getName() == req.action.value; }) - 1;
+                if (this.playerIndexThatHasTurn < -1) {
+                    this.playerIndexThatHasTurn = this.players.length - 2;
+                }
+                else {
+                    if (this.playerIndexThatHasTurn > this.players.length - 1) {
+                        this.playerIndexThatHasTurn = -1;
+                    }
+                }
+                this.UpdateGameDirection(1);
+                this.InvokeNextPlayerRound();
             }
         }
     };
