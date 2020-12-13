@@ -1,7 +1,7 @@
 import * as BABYLON from 'babylonjs';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, CardGame, Player, VotingUI } from './CardGame';
-import { GameInfo, GameState, SVEAccount, SVEGame } from 'svebaselib';
+import { GameInfo, GameRequest, GameState, SVEAccount, SVEGame } from 'svebaselib';
 declare class WizardGUI extends BaseGameGUI {
     protected GameStateText: GUI.TextBlock;
     AVotingUI: VotingUI;
@@ -29,8 +29,11 @@ declare class Wizard extends CardGame {
     StartGame(): void;
     CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     Tick(): void;
-    AddPlayer(user: SVEAccount, isLocal: Boolean, player?: Player): void;
-    OnServerResponse(result: any): void;
+    onJoined(user: SVEAccount): void;
+    onRequest(result: GameRequest): void;
+    protected OnGameStateChange(gs: any): void;
+    protected onPlayersRoundBegin(player: Player): void;
+    protected onNotify(notification: string, invoker: Player, target: Player): void;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     MinPlayers(): number;
     MaxPlayers(): number;

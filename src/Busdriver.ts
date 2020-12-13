@@ -3,7 +3,7 @@ import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
 import { isUndefined } from 'util';
-import { SVEAccount, SVEGame, TargetType, GameState } from 'svebaselib';
+import { SVEAccount, SVEGame, TargetType, GameState, GameRequest, SetDataRequest } from 'svebaselib';
 
 enum CardType {
     Number = "Number",
@@ -766,7 +766,7 @@ class Busdriver extends CardGame {
 
     public StartGame(): void {
         this.enableZMovement = true;
-        if (this.bIsHosting) {
+        if (this.IsHostInstance()) {
             this.Deck.Game = this;
 
             this.SetInitialCardCount(0);
@@ -830,8 +830,29 @@ class Busdriver extends CardGame {
         
     }
 
-    public AddPlayer(user: SVEAccount, isLocal: Boolean, player: Player = null): void {
-        super.AddPlayer(user, isLocal, new BusdriverPlayer(user, 0, isLocal));
+    public onJoined(user: SVEAccount): void {
+        super.onJoined(user);
+
+        let isLocal = user.getName() === this.localUser.getName();
+        if (isLocal) {
+            console.log("On add new local player: " + user.getName());
+        } else {
+            console.log("On add new remote player: " + user.getName());
+        }
+        let player = new BusdriverPlayer(user, 0, isLocal);
+
+        this.GUI.PlayerList.AddPlayer(player);
+
+        if (isLocal) {
+            this.localPlayer = player;
+            this.localPlayer.camera = this.camera;
+            this.localPlayer.Game = this;
+        }
+        this.players.push(player);
+
+        player.Game = this;
+
+        this.OnNewPlayer();
 
         if(isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
@@ -845,21 +866,52 @@ class Busdriver extends CardGame {
         return this.localPlayer.GetID();    
     }
 
-    public OnServerResponse(result: any): void {
-        super.OnServerResponse(result);
+    public onRequest(result: GameRequest): void {
+        super.onRequest(result);
 
         if (this.CurrentState == BusdriverState.Selecting || this.CurrentState == BusdriverState.Driving) {
-            if (result.type == "vote" && result.invoker == this.localPlayer.GetID()) {
-                console.log("Got vote: " + JSON.stringify(result));
-                let card = <SkatCard>(<BusdriverCardDeck>this.Deck).GetDrawStack().DrawCard();
-                this.localPlayer.AddCard(card);
-                if (result.voteID == "GuessColor") {
-                    console.log("Got voting result for GuessColor: " + result.value);
-                    
-                    if (result.invoker == this.localPlayer.GetID()) {
-                        if (result.value == "Rot") {
-                            if(card.GetColor() == CardColor.Check || card.GetColor() == CardColor.Heart) {
+            if (typeof result.action !== "string") {
+                if (result.action.field == "vote" && result.invoker == this.localPlayer.GetID()) {
+                    console.log("Got vote: " + JSON.stringify(result));
+                    let card = <SkatCard>(<BusdriverCardDeck>this.Deck).GetDrawStack().DrawCard();
+                    this.localPlayer.AddCard(card);
+                    if (result.action.value.voteID == "GuessColor") {
+                        console.log("Got voting result for GuessColor: " + result.action.value.value);
+                        
+                        if (result.invoker == this.localPlayer.GetID()) {
+                            if (result.action.value.value == "Rot") {
+                                if(card.GetColor() == CardColor.Check || card.GetColor() == CardColor.Heart) {
+                                    this.CurrentRound = RoundType.GuessHigherOrLower;
+                                    (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
+                                } else {
+                                    if (this.isBusdriver) {
+                                        this.CurrentRound = RoundType.GuessColor;
+                                        this.localPlayer.dropCards();
+                                    }
+                                }
+                                
+                            } else {
+                                if(card.GetColor() == CardColor.Cross || card.GetColor() == CardColor.Spades) {
+                                    this.CurrentRound = RoundType.GuessHigherOrLower;
+                                    (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
+                                } else {
+                                    if (this.isBusdriver) {
+                                        this.CurrentRound = RoundType.GuessColor;
+                                        this.localPlayer.dropCards();
+                                    }
+                                }
+                            }
+                            if (!this.isBusdriver)
                                 this.CurrentRound = RoundType.GuessHigherOrLower;
+                        }
+                    }
+
+                    if (result.action.value.voteID == "GuessHigherOrLower") {
+                        console.log("Got voting result for GuessHigherOrLower: " + result.action.value.value);
+                        
+                        if (result.action.value.value == "Tiefer") {
+                            if(card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()) {
+                                this.CurrentRound = RoundType.GuessInside;
                                 (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
                             } else {
                                 if (this.isBusdriver) {
@@ -867,10 +919,9 @@ class Busdriver extends CardGame {
                                     this.localPlayer.dropCards();
                                 }
                             }
-                            
                         } else {
-                            if(card.GetColor() == CardColor.Cross || card.GetColor() == CardColor.Spades) {
-                                this.CurrentRound = RoundType.GuessHigherOrLower;
+                            if(card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()) {
+                                this.CurrentRound = RoundType.GuessInside;
                                 (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
                             } else {
                                 if (this.isBusdriver) {
@@ -880,168 +931,144 @@ class Busdriver extends CardGame {
                             }
                         }
                         if (!this.isBusdriver)
-                            this.CurrentRound = RoundType.GuessHigherOrLower;
-                    }
-                }
-
-                if (result.voteID == "GuessHigherOrLower") {
-                    console.log("Got voting result for GuessHigherOrLower: " + result.value);
-                    
-                    if (result.value == "Tiefer") {
-                        if(card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()) {
                             this.CurrentRound = RoundType.GuessInside;
-                            (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
-                        } else {
-                            if (this.isBusdriver) {
-                                this.CurrentRound = RoundType.GuessColor;
-                                this.localPlayer.dropCards();
-                            }
-                        }
-                    } else {
-                        if(card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()) {
-                            this.CurrentRound = RoundType.GuessInside;
-                            (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
-                        } else {
-                            if (this.isBusdriver) {
-                                this.CurrentRound = RoundType.GuessColor;
-                                this.localPlayer.dropCards();
-                            }
-                        }
                     }
-                    if (!this.isBusdriver)
-                        this.CurrentRound = RoundType.GuessInside;
-                }
 
 
-                if (result.voteID == "GuessInside") {
-                    console.log("Got voting result for GuessInside: " + result.value);
-                    
-                    if (result.value == "Innerhalb") {
-                        if((card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()
-                        && card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue())
-                        || (card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()
-                        && card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue())) {
-                            this.CurrentRound = RoundType.GuessHadColor;
-                            (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
-                        } else {
-                            if (this.isBusdriver) {
-                                this.CurrentRound = RoundType.GuessColor;
-                                this.localPlayer.dropCards();
-                            }
-                        }
-                    } else {
-                        if(!((card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()
-                        && card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue())
-                        || (card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()
-                        && card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue()))
-                        && card.GetValue() != this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue()
-                        && card.GetValue() != this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()) {
-                            this.CurrentRound = RoundType.GuessHadColor;
-                            (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
-                        } else {
-                            if (this.isBusdriver) {
-                                this.CurrentRound = RoundType.GuessColor;
-                                this.localPlayer.dropCards();
-                            }
-                        }
-                    }
-                    if (!this.isBusdriver)
-                        this.CurrentRound = RoundType.GuessHadColor;
-                }
-
-                if (result.voteID == "GuessHadColor") {
-                    console.log("Got voting result for GuessHadColor: " + result.value);
+                    if (result.action.value.voteID == "GuessInside") {
+                        console.log("Got voting result for GuessInside: " + result.action.value.value);
                         
-                    let hasColor = false;
-                    this.localPlayer.GetCards().forEach(c => {
-                        if (c.GetMesh().name != card.GetMesh().name)
-                            hasColor = hasColor || (<SkatCard>c).GetColor() == card.GetColor();
-                    });
-                    
-                    if (result.value == "Ja") {
-                        if(hasColor) {
-                            this.CurrentRound = RoundType.Suspend;
-                            (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
+                        if (result.action.value.value == "Innerhalb") {
+                            if((card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()
+                            && card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue())
+                            || (card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()
+                            && card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue())) {
+                                this.CurrentRound = RoundType.GuessHadColor;
+                                (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
+                            } else {
+                                if (this.isBusdriver) {
+                                    this.CurrentRound = RoundType.GuessColor;
+                                    this.localPlayer.dropCards();
+                                }
+                            }
                         } else {
-                            if (this.isBusdriver) {
-                                this.CurrentRound = RoundType.GuessColor;
-                                this.localPlayer.dropCards();
+                            if(!((card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()
+                            && card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue())
+                            || (card.GetValue() < this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()
+                            && card.GetValue() > this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue()))
+                            && card.GetValue() != this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 3].GetValue()
+                            && card.GetValue() != this.localPlayer.GetCards()[this.localPlayer.GetCards().length - 2].GetValue()) {
+                                this.CurrentRound = RoundType.GuessHadColor;
+                                (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
+                            } else {
+                                if (this.isBusdriver) {
+                                    this.CurrentRound = RoundType.GuessColor;
+                                    this.localPlayer.dropCards();
+                                }
                             }
                         }
-                    } else {
-                        if(!hasColor) {
-                            this.CurrentRound = RoundType.Suspend;
-                            (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
-                        } else {
-                            if (this.isBusdriver) {
-                                this.CurrentRound = RoundType.GuessColor;
-                                this.localPlayer.dropCards();
-                            }
-                        }
+                        if (!this.isBusdriver)
+                            this.CurrentRound = RoundType.GuessHadColor;
                     }
-                    if (!this.isBusdriver)
-                        this.CurrentRound = RoundType.Suspend;
-                }
 
-                return;
+                    if (result.action.value.voteID == "GuessHadColor") {
+                        console.log("Got voting result for GuessHadColor: " + result.action.value.value);
+                            
+                        let hasColor = false;
+                        this.localPlayer.GetCards().forEach(c => {
+                            if (c.GetMesh().name != card.GetMesh().name)
+                                hasColor = hasColor || (<SkatCard>c).GetColor() == card.GetColor();
+                        });
+                        
+                        if (result.action.value.value == "Ja") {
+                            if(hasColor) {
+                                this.CurrentRound = RoundType.Suspend;
+                                (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
+                            } else {
+                                if (this.isBusdriver) {
+                                    this.CurrentRound = RoundType.GuessColor;
+                                    this.localPlayer.dropCards();
+                                }
+                            }
+                        } else {
+                            if(!hasColor) {
+                                this.CurrentRound = RoundType.Suspend;
+                                (<BusdriverPlayer>this.localPlayer).SetPoints((<BusdriverPlayer>this.localPlayer).Points + 1);
+                            } else {
+                                if (this.isBusdriver) {
+                                    this.CurrentRound = RoundType.GuessColor;
+                                    this.localPlayer.dropCards();
+                                }
+                            }
+                        }
+                        if (!this.isBusdriver)
+                            this.CurrentRound = RoundType.Suspend;
+                    }
+
+                    return;
+                }
             }
         }
 
         this.isSetup = true;
 
-        if (result.type == "updatePlayer") {
-            this.players.forEach(p => {
-                if(p.GetID() == result.player) {
-                    if (result.field == "points")
-                        (<BusdriverPlayer>p).Points = result.value;
-                    this.GUI.PlayerList.UpdatePlayer(p);
-                }
-            });
+        if (typeof result.action !== "string") {
+            if (result.action.field == "!updatePlayer") {
+                this.players.forEach(p => {
+                    if(p.getName() == result.target.id) {
+                        if ((result.action as SetDataRequest).value.field == "points")
+                            (<BusdriverPlayer>p).Points = (result.action as SetDataRequest).value.field;
+                        this.GUI.PlayerList.UpdatePlayer(p);
+                    }
+                });
 
-            return;
-        }
-
-        if (result.type == "gameState") {
-            let gs: GameState = this.CheckGameState();
-            
-            this.GUI.ShowGameState(gs);
-
-            this.EndGame();
-
-            return;
-        }
-
-        if (result.type == "nextTurn") {
-            this.GUI.PlayerList.SetPlayerActive(this.players.find(e => e.GetID() == result.player));
-            return;
-        }
-
-        if (result.type == "notifyPlayer") {
-            if (result.notification == "busdriver!") {
-                this.isBusdriver = true;
-                this.GUI.AnnounceBusdriver();
-                this.CurrentRound = RoundType.GuessColor;
+                return;
             }
-            if(result.notification == "SwitchToDriving!") {
-                this.CurrentState = BusdriverState.Driving;
-                this.GUI.SetEnabledNextRoundBtn(false);
-            }
-            if(result.notification == "SwitchToPyramid!") {
-                this.CurrentState = BusdriverState.Pyramid;
-                this.CurrentRound = RoundType.PlayingPyramid;
-                this.GUI.SetEnabledNextRoundBtn(true);
-            }
-
-            if(result.notification == "!RevealNext") {
-                (<BusdriverCardDeck>this.Deck).GetPyramidStack().finishSetup();
-                if(!(<BusdriverCardDeck>this.Deck).GetPyramidStack().revealNextCard()) {
-                    this.CurrentRound = RoundType.Suspend;
-                }
-            }
-            return;
         }
 
         console.log("Unknown response:" + JSON.stringify(result));
+    }
+
+    protected onPlayersRoundBegin(player: Player) {
+        super.onPlayersRoundBegin(player);
+        this.GUI.PlayerList.SetPlayerActive(player);
+    }
+
+    protected OnGameStateChange(gameState) {
+        super.OnGameStateChange(gameState);
+        if (gameState != GameState.Undetermined) {
+            this.GUI.ShowGameState(gameState); 
+
+            this.localPlayer.Game = this;
+            this.localPlayer.SetGameState(gameState);
+
+            this.EndGame();
+        }
+    }
+
+    protected onNotify(notification: string, invoker: Player, target?: Player) {
+        super.onNotify(notification, invoker, target);
+        if (notification == "busdriver!" && target !== undefined && this.localUser!.getName() === target.getName()) {
+            this.isBusdriver = true;
+            this.GUI.AnnounceBusdriver();
+            this.CurrentRound = RoundType.GuessColor;
+        }
+        if(notification == "SwitchToDriving!") {
+            this.CurrentState = BusdriverState.Driving;
+            this.GUI.SetEnabledNextRoundBtn(false);
+        }
+        if(notification == "SwitchToPyramid!") {
+            this.CurrentState = BusdriverState.Pyramid;
+            this.CurrentRound = RoundType.PlayingPyramid;
+            this.GUI.SetEnabledNextRoundBtn(true);
+        }
+
+        if(notification == "!RevealNext") {
+            (<BusdriverCardDeck>this.Deck).GetPyramidStack().finishSetup();
+            if(!(<BusdriverCardDeck>this.Deck).GetPyramidStack().revealNextCard()) {
+                this.CurrentRound = RoundType.Suspend;
+            }
+        }
     }
 
     public OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo) {
@@ -1062,16 +1089,6 @@ class Busdriver extends CardGame {
                     }
                 }
             }
-        }
-
-        let gameState = this.CheckGameState();
-        if (gameState != GameState.Undetermined) {
-            this.GUI.ShowGameState(gameState); 
-
-            this.localPlayer.Game = this;
-            this.localPlayer.SetGameState(gameState);
-
-            this.EndGame();
         }
     }
 

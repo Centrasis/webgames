@@ -1,7 +1,7 @@
 import * as BABYLON from 'babylonjs';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, CardGame, Player, VotingUI } from './CardGame';
-import { SVEAccount, SVEGame, GameState } from 'svebaselib';
+import { SVEAccount, SVEGame, GameState, GameRequest } from 'svebaselib';
 declare class Challenge {
     CardValue: number;
     ChallengeText: string;
@@ -52,9 +52,12 @@ declare class Busdriver extends CardGame {
     StartGame(): void;
     CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     Tick(): void;
-    AddPlayer(user: SVEAccount, isLocal: Boolean, player?: Player): void;
+    onJoined(user: SVEAccount): void;
     GetLocalPlayerID(): String;
-    OnServerResponse(result: any): void;
+    onRequest(result: GameRequest): void;
+    protected onPlayersRoundBegin(player: Player): void;
+    protected OnGameStateChange(gameState: any): void;
+    protected onNotify(notification: string, invoker: Player, target?: Player): void;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     MinPlayers(): number;
     MaxPlayers(): number;

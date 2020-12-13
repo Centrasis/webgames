@@ -12,11 +12,6 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 import { SVEGame } from 'svebaselib';
-export var GameRejectReason;
-(function (GameRejectReason) {
-    GameRejectReason[GameRejectReason["GameNotPresent"] = 0] = "GameNotPresent";
-    GameRejectReason[GameRejectReason["PlayerLimitExceeded"] = 1] = "PlayerLimitExceeded";
-})(GameRejectReason || (GameRejectReason = {}));
 var BaseGame = /** @class */ (function (_super) {
     __extends(BaseGame, _super);
     function BaseGame() {

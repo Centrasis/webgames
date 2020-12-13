@@ -602,7 +602,7 @@ var Wizard = /** @class */ (function (_super) {
         this.lastPlayerBeganID = "";
         _super.prototype.StartGame.call(this);
         this.bIsSuspended = false;
-        if (this.bIsHosting) {
+        if (this.IsHostInstance()) {
             this.Deck.Game = this;
             this.SetInitialCardCount(1);
             this.players.forEach(function (p) {
@@ -621,9 +621,25 @@ var Wizard = /** @class */ (function (_super) {
     };
     Wizard.prototype.Tick = function () {
     };
-    Wizard.prototype.AddPlayer = function (user, isLocal, player) {
-        if (player === void 0) { player = null; }
-        _super.prototype.AddPlayer.call(this, user, isLocal, new WizardPlayer(user, 1, isLocal, this.scene));
+    Wizard.prototype.onJoined = function (user) {
+        _super.prototype.onJoined.call(this, user);
+        var isLocal = user.getName() === this.localUser.getName();
+        if (isLocal) {
+            console.log("On add new local player: " + user.getName());
+        }
+        else {
+            console.log("On add new remote player: " + user.getName());
+        }
+        var player = new WizardPlayer(user, 1, isLocal, this.scene);
+        this.GUI.PlayerList.AddPlayer(player);
+        if (isLocal) {
+            this.localPlayer = player;
+            this.localPlayer.camera = this.camera;
+            this.localPlayer.Game = this;
+        }
+        this.players.push(player);
+        player.Game = this;
+        this.OnNewPlayer();
         if (isLocal) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
@@ -631,39 +647,39 @@ var Wizard = /** @class */ (function (_super) {
         this.GUI.GameID = this.gameID;
         this.GUI.Game = this;
     };
-    Wizard.prototype.OnServerResponse = function (result) {
-        var _this = this;
-        _super.prototype.OnServerResponse.call(this, result);
-        if (result.type == "vote") {
+    Wizard.prototype.onRequest = function (result) {
+        _super.prototype.onRequest.call(this, result);
+        /*if (result.type == "vote") {
             if (result.voteID.includes("PointsGuess_")) {
                 console.log("Found pointsGuess: " + result.voteID);
-                this.players.forEach(function (p) {
-                    if (result.voteID == "PointsGuess_" + p.GetID()) {
-                        p.SetTargetPoints(result.value);
+                this.players.forEach(p => {
+                    if(result.voteID == "PointsGuess_" + p.GetID()) {
+                        (<WizardPlayer>p).SetTargetPoints(result.value);
                     }
                 });
-                if (this.IsHostInstance()) {
-                    var hasAllVotes_1 = true;
-                    this.players.forEach(function (p) {
-                        hasAllVotes_1 = hasAllVotes_1 && p.GetTargetPoints() >= 0;
+
+                if(this.IsHostInstance()) {
+                    let hasAllVotes = true;
+                    this.players.forEach(p => {
+                        hasAllVotes = hasAllVotes && (<WizardPlayer>p).GetTargetPoints() >= 0;
                     });
-                    if (hasAllVotes_1) {
+
+                    if(hasAllVotes) {
                         if (this.lastPlayerBeganID != "") {
-                            for (var i = 0; i < this.players.length; i++) {
-                                if (this.players[i].GetID() == this.lastPlayerBeganID) {
-                                    if (i + 1 < this.players.length) {
-                                        this.lastPlayerBeganID = this.players[i + 1].GetID();
-                                    }
-                                    else {
+                            for(let i = 0; i < this.players.length; i++) {
+                                if(this.players[i].GetID() == this.lastPlayerBeganID) {
+                                    if (i+1 < this.players.length) {
+                                        this.lastPlayerBeganID = this.players[i+1].GetID();
+                                    } else {
                                         this.lastPlayerBeganID = this.players[0].GetID();
                                     }
                                     break;
                                 }
                             }
-                        }
-                        else {
+                        } else {
                             this.lastPlayerBeganID = this.players[Math.round(Math.random() * (this.players.length - 1))].GetID();
                         }
+    
                         this.sendGameRequest({
                             action: {
                                 field: "!setTurn",
@@ -676,113 +692,126 @@ var Wizard = /** @class */ (function (_super) {
             }
             return;
         }
-        if (result.type == "gameState") {
-            var gs = this.CheckGameState();
-            if (result.field == "RoundCount") {
-                this.roundCount = result.value;
+
+        if (typeof result.action !== "string") {
+            if (result.action.field == "RoundCount") {
+                this.roundCount = result.action.value;
             }
-            this.GUI.ShowGameState(gs);
-            this.EndGame();
-            return;
-        }
-        if (result.type == "updatePlayer") {
-            this.players.forEach(function (p) {
-                if (p.GetID() == result.player) {
-                    if (result.field == "points")
-                        p.Points = result.value;
-                    if (result.field == "roundpoints")
-                        p.RoundPoints = result.value;
-                    if (result.field == "targetpoints")
-                        p.TargetPoints = result.value;
-                    _this.GUI.PlayerList.UpdatePlayer(p);
-                }
-            });
-            if (result.field == "trumpCard") {
-                this.Deck.SetTrumpCard(result.value);
-            }
-            return;
-        }
-        if (result.type == "drawCard") {
-            this.isSetup = true;
-            if (this.roundCount == 1) {
-                console.log("Prepare first round:");
-                var i_2 = 0;
-                this.players.forEach(function (p) {
-                    if (p.GetID() == result.player) {
-                        p.IsFirstRound(true, i_2, _this.camera);
+
+            if (result.type == "updatePlayer") {
+                this.players.forEach(p => {
+                    if(p.GetID() == result.player) {
+                        if (result.field == "points")
+                            (<WizardPlayer>p).Points = result.value;
+                        if (result.field == "roundpoints")
+                            (<WizardPlayer>p).RoundPoints = result.value;
+                        if (result.field == "targetpoints")
+                            (<WizardPlayer>p).TargetPoints = result.value;
+                        this.GUI.PlayerList.UpdatePlayer(p);
                     }
-                    i_2++;
                 });
-            }
-            else {
-                console.log("Prepare " + this.roundCount + " round:");
-                var i_3 = 0;
-                this.players.forEach(function (p) {
-                    if (p.GetID() == result.player) {
-                        p.IsFirstRound(false, i_3, _this.camera);
-                    }
-                    i_3++;
-                });
-                this.localPlayer.update();
-            }
-        }
-        if (result.type == "nextTurn") {
-            this.GUI.PlayerList.SetPlayerActive(this.players.find(function (e) { return e.GetID() == result.player; }));
-            if (this.lastPlayerBeganID == "") {
-                this.lastPlayerBeganID = result.player;
-            }
-            if (this.localPlayer.GetID() == result.player) {
-                if (this.localPlayer.GetCardsCount() == 0) {
-                    this.OnEndLocalRound();
+
+                if(result.field == "trumpCard") {
+                    (<WizardCardDeck>this.Deck).SetTrumpCard(result.value);
                 }
+
+                return;
             }
-            return;
-        }
-        if (result.type == "notifyPlayer") {
-            if (result.notification == "!reset") {
-                this.lastPlayerBeganID = "";
-                this.hadPlayedSinceReset = false;
-                this.roundCount++;
-                if (this.roundCount > this.maxRoundCount) {
-                    this.OnSelect(null, null);
-                    return;
-                }
-                console.log("Start round: " + this.roundCount);
-                if (this.bIsHosting) {
-                    this.Deck.Game = this;
-                    this.Deck.ResetPlayedCards();
-                    if (this.roundCount > 1) {
-                        this.players.forEach(function (p) {
-                            p.EvaluateRound();
-                            p.GetCards().forEach(function (c) {
-                                _this.Deck.GetDrawStack().addCard(c, p, false);
-                            });
-                        });
-                    }
-                    setTimeout(function () {
-                        _this.players.forEach(function (p) {
-                            p.Game = _this;
-                            p.drawNumberOfCards(_this.Deck.GetDrawStack(), _this.roundCount);
-                        });
-                        console.log("Reveal trump!");
-                        _this.Deck.Game = _this;
-                        _this.Deck.RevealTrumpCard();
-                        if (_this.roundCount == 1) {
-                            console.log("Prepare first round host:");
-                            var i_4 = 0;
-                            _this.players.forEach(function (p) {
-                                p.IsFirstRound(true, i_4, _this.camera);
-                                i_4++;
-                            });
+
+            if (result.type == "drawCard") {
+                this.isSetup = true;
+
+                if (this.roundCount == 1) {
+                    console.log("Prepare first round:");
+
+                    let i = 0;
+                    this.players.forEach((p) => {
+                        if (p.GetID() == result.player) {
+                            (<WizardPlayer>p).IsFirstRound(true, i, this.camera);
                         }
-                    }, 1000);
+                        i++;
+                    });
+                } else {
+                    console.log("Prepare " + this.roundCount + " round:");
+
+                    let i = 0;
+                    this.players.forEach((p) => {
+                        if (p.GetID() == result.player) {
+                            (<WizardPlayer>p).IsFirstRound(false, i, this.camera);
+                        }
+                        i++;
+                    });
+                    this.localPlayer.update();
                 }
-                this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
-                this.GUI.ShowPointsGuess(this);
             }
-            return;
         }
+        */
         console.log("Unknown response:" + JSON.stringify(result));
+    };
+    Wizard.prototype.OnGameStateChange = function (gs) {
+        _super.prototype.OnGameStateChange.call(this, gs);
+        if (gs != GameState.Undetermined) {
+            this.GUI.ShowGameState(gs);
+            this.localPlayer.Game = this;
+            this.localPlayer.SetGameState(gs);
+            this.EndGame();
+        }
+    };
+    Wizard.prototype.onPlayersRoundBegin = function (player) {
+        _super.prototype.onPlayersRoundBegin.call(this, player);
+        this.GUI.PlayerList.SetPlayerActive(player);
+        if (this.lastPlayerBeganID == "") {
+            this.lastPlayerBeganID = player.getName();
+        }
+        if (this.localPlayer.getName() == player.getName()) {
+            if (this.localPlayer.GetCardsCount() == 0) {
+                this.OnEndLocalRound();
+            }
+        }
+    };
+    Wizard.prototype.onNotify = function (notification, invoker, target) {
+        var _this = this;
+        if (notification == "!reset") {
+            this.lastPlayerBeganID = "";
+            this.hadPlayedSinceReset = false;
+            this.roundCount++;
+            if (this.roundCount > this.maxRoundCount) {
+                this.OnSelect(null, null);
+                return;
+            }
+            console.log("Start round: " + this.roundCount);
+            if (this.IsHostInstance()) {
+                this.Deck.Game = this;
+                this.Deck.ResetPlayedCards();
+                if (this.roundCount > 1) {
+                    this.players.forEach(function (p) {
+                        p.EvaluateRound();
+                        p.GetCards().forEach(function (c) {
+                            _this.Deck.GetDrawStack().addCard(c, p, false);
+                        });
+                    });
+                }
+                setTimeout(function () {
+                    _this.players.forEach(function (p) {
+                        p.Game = _this;
+                        p.drawNumberOfCards(_this.Deck.GetDrawStack(), _this.roundCount);
+                    });
+                    console.log("Reveal trump!");
+                    _this.Deck.Game = _this;
+                    _this.Deck.RevealTrumpCard();
+                    if (_this.roundCount == 1) {
+                        console.log("Prepare first round host:");
+                        var i_2 = 0;
+                        _this.players.forEach(function (p) {
+                            p.IsFirstRound(true, i_2, _this.camera);
+                            i_2++;
+                        });
+                    }
+                }, 1000);
+            }
+            this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
+            this.GUI.ShowPointsGuess(this);
+        }
     };
     Wizard.prototype.OnSelect = function (evt, pickInfo) {
         _super.prototype.OnSelect.call(this, evt, pickInfo);
@@ -800,13 +829,6 @@ var Wizard = /** @class */ (function (_super) {
                     this.OnEndLocalRound();
                 }
             }
-        }
-        var gameState = this.CheckGameState();
-        if (gameState != GameState.Undetermined) {
-            this.GUI.ShowGameState(gameState);
-            this.localPlayer.Game = this;
-            this.localPlayer.SetGameState(gameState);
-            this.EndGame();
         }
     };
     Wizard.prototype.MinPlayers = function () {

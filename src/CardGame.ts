@@ -1,9 +1,8 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import BaseGame, {Commandable, GameRejectReason} from './BaseGame';
-import { isUndefined } from 'util';
-import { SessionUserInitializer, SVEAccount, SVEGame, GameState, TargetType, SetDataRequest, ActionTarget, GameInfo, GameRequest, BasicUserInitializer } from 'svebaselib';
+import BaseGame, {Commandable} from './BaseGame';
+import { SessionUserInitializer, SVEAccount, SVEGame, GameState, TargetType, SetDataRequest, ActionTarget, GameInfo, GameRequest, BasicUserInitializer, GameRejectReason } from 'svebaselib';
 
 export enum PlayerGamePhase {
     Spectating,
@@ -79,7 +78,7 @@ export class Card {
         //let upliftAngle = 3.0 * Math.PI / 4.0;
         //this.mesh.rotate(BABYLON.Axis.X, upliftAngle, BABYLON.Space.LOCAL);
 
-        if (isUndefined(camera) || camera == null) {
+        if (camera !== undefined || camera == null) {
             return;
         }
         let dir = BABYLON.Ray.CreateNewFromTo(camera.position, camera.getTarget()).direction;
@@ -711,16 +710,15 @@ export class BaseGameGUI {
     }
 }
 
-export abstract class CardGame extends BaseGame implements Commandable { 
-    private playDirection: number;
+export abstract class CardGame extends BaseGame { 
+    private playDirection: number = 1;
     protected scene: BABYLON.Scene;
     protected camera: BABYLON.FreeCamera;
     protected players: Player[];
+    protected playerIndexThatHasTurn: number = -1;
     protected Deck: BaseCardDeck;
     protected localPlayer: Player;
-    protected bIsRunning: Boolean;
     protected gameID: String;
-    protected bIsHosting: Boolean;
     protected highlightLayer: BABYLON.HighlightLayer;
     protected GUI: BaseGameGUI;
     protected enableZMovement = false;
@@ -729,14 +727,14 @@ export abstract class CardGame extends BaseGame implements Commandable {
         super(info);
         this.players = [];
         this.playDirection = 1;
-        this.bIsRunning = false;
-        this.bIsHosting = false;
         this.localPlayer = null;
         this.Deck = null;
         this.GUI = null;
     }
 
-    public abstract CheckGameState(): GameState;
+    public CheckGameState(): GameState {
+        return GameState.Undetermined;
+    }
 
     public StartLocalPlayersRound() {
         if (this.localPlayer.GetPhase() == PlayerGamePhase.Spectating)
@@ -755,31 +753,11 @@ export abstract class CardGame extends BaseGame implements Commandable {
         });
     }
 
-    public StartGame(): void {
-        this.bIsRunning = true;
-
+    public onStart(): void {
+        super.onStart();
         this.scene.onPointerDown = this.OnSelect.bind(this);
-
         this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
-
-        if (this.bIsHosting) {
-            this.sendGameRequest({
-                action: "!startGame",
-                invoker: this.localPlayer.getName(),
-                target: {
-                    type: TargetType.Game,
-                    id: ""
-                }
-            })
-        }
-    }
-
-    public IsRunning(): Boolean {
-        return this.bIsRunning;
-    }
-
-    public IsHostInstance(): Boolean {
-        return this.bIsHosting;
+        this.OnSelect(null, null);
     }
 
     public CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene {
@@ -944,46 +922,50 @@ export abstract class CardGame extends BaseGame implements Commandable {
         }
     }
 
-    public GiveUp(): void {
-        this.sendGameRequest({
-            action: {
-                field: "gameState",
-                value: GameState.Lost
-            },
-            invoker: String(this.GetLocalPlayerID()),
-            target: {
-                id: "",
-                type: TargetType.Game
-            }
-        });
-
-        this.EndGame();
-    }
-
     public InvokeNextPlayerRound() {
         console.log("Invoke next round");
-        this.sendGameRequest({
-            action: { 
-                field: "!nextTurn",
-                value: this.playDirection
-            },
-            invoker: this.localPlayer.getName(),
-            target: {
-                type: TargetType.Game,
-                id: ""
+        if (this.IsHostInstance()) {
+            this.SetGameState(this.CheckGameState());
+            
+            this.playerIndexThatHasTurn += this.playDirection;
+            if (this.playerIndexThatHasTurn < 0) {
+                this.playerIndexThatHasTurn = this.players.length - 1;
+            } else {
+                if (this.playerIndexThatHasTurn > this.players.length) {
+                    this.playerIndexThatHasTurn = 0;
+                }
             }
-        });
+            this.sendGameRequest({
+                action: { 
+                    field: "!nextTurn",
+                    value: this.players[this.playerIndexThatHasTurn].getName()
+                },
+                invoker: this.localPlayer.getName(),
+                target: {
+                    type: TargetType.Game,
+                    id: ""
+                }
+            });
+        } else {
+            this.sendGameRequest({
+                action: "!nextTurn",
+                invoker: this.localPlayer.getName(),
+                target: {
+                    type: TargetType.Game,
+                    id: ""
+                }
+            });
+        }
     }
 
-    public AddPlayer(user: SVEAccount, isLocal: Boolean, player: Player = null): void {
+    public onJoined(user: SVEAccount): void {
+        let isLocal = user.getName() === this.localUser.getName();
         if (isLocal) {
             console.log("On add new local player: " + user.getName());
-        }
-        else {
+        } else {
             console.log("On add new remote player: " + user.getName());
         }
-        if (player == null)
-            player = new Player(user, 6, isLocal);
+        let player = new Player(user, 6, isLocal);
 
         this.GUI.PlayerList.AddPlayer(player);
 
@@ -999,128 +981,80 @@ export abstract class CardGame extends BaseGame implements Commandable {
         this.OnNewPlayer();
     }
 
-    public onJoined() {
-        console.log("Card game joined!");
-        this.OnConnected(true);
+    protected onPlayersRoundBegin(player: Player) {
+
     }
 
-    public executeCommand(cmd: string, req: GameRequest) {
-        console.log("Execute command: " + cmd);
-        if("!join" == cmd) {
-            new SVEAccount({id: Number(req.invoker)} as BasicUserInitializer, (user) => {
-                this.AddPlayer(user, false);
-            });
-            return;
-        }
+    protected onNotify(notification: string, invoker: Player, target?: Player) {
 
-        if("!startGame" == cmd) {
-            if (req.invoker == this.host)
-                this.StartGame();
-            if(this.bIsRunning) {
-                this.OnSelect(null, null);
-            }
-            return;
-        }
-
-        if("!notify" == cmd) {
-            console.log("Notify: " + (req.action as SetDataRequest).value);
-            return;
-        }
-
-        if("!endGame" == cmd) {
-            if (req.invoker == this.host)
-                this.EndGame();
-            if(this.bIsRunning) {
-                this.OnSelect(null, null);
-            }
-            return;
-        }
-
-        if("!drawCard" == cmd) {
-            this.players.forEach((p) => {
-                if (p.getName() == req.target.id) {
-                    this.Deck.Game = this;
-                    this.Deck.GiveCardByNameTo((req.action as SetDataRequest).value, p);
-                    this.GUI.PlayerList.UpdatePlayer(p);
-                }
-            });
-            return;
-        }
-
-        if("!nextTurn" == cmd) {
-            if (this.localPlayer.getName() == req.target.id) {
-                this.StartLocalPlayersRound();
-            }
-            return;
-        }
-
-        if("!playCard" == cmd) {
-            let result = (req.action as SetDataRequest).value;
-            if (req.invoker == "") {
-                this.Deck.PlayCardFromDeckOnStack(req.target.id, result.card, result.revealed);
-            } else {
-                this.players.forEach((p) => {
-                    if (p.getName() == req.invoker) {
-                        console.log("Play Card from player: " + req.invoker);
-                        this.Deck.Game = this;
-                        this.Deck.PlayCardByNameOnStack(req.target.id, result.card, p, result.revealed);
-                        this.GUI.PlayerList.UpdatePlayer(p);
-                    }
-                });
-            }
-            return;
-        }
     }
 
     public onRequest(req: GameRequest) {
+        super.onRequest(req);
+
         if (typeof req.action === "string") {
-            if (req.action.startsWith("!")) {
-                if (req.target === undefined || req.target.type === TargetType.Game) {
-                    this.executeCommand(req.action, req);
-                }
+            if("!drawCard" == req.action) {
+                this.players.forEach((p) => {
+                    if (p.getName() == req.target.id) {
+                        this.Deck.Game = this;
+                        this.Deck.GiveCardByNameTo((req.action as SetDataRequest).value, p);
+                        this.GUI.PlayerList.UpdatePlayer(p);
+                    }
+                });
+                return;
+            }
+
+            if("!nextTurn" == req.action) {
+                if(this.IsHostInstance()) {
+                    this.InvokeNextPlayerRound();
+                }   
+                return;
             }
         } else {
-            if (req.action.field.startsWith("!")) {
-                // execute action
-                this.executeCommand(req.action.field, req);
-            } else {
-                // set field
-                if (req.target !== undefined) {
-                    if (req.target.type === TargetType.Game) {
-                        (this as any)[req.action.field] = req.action.value;
-                    } else {
-                        if (req.target.type === TargetType.Player) {
-                            this.players.forEach(p => {
-                                if(p.getName() === req.target.id) {
-                                    (p as any)[(req.action as SetDataRequest).field] = (req.action as SetDataRequest).value;
-                                    this.GUI.PlayerList.UpdatePlayer(p);
-                                }
-                            });
-                        } else {
-                            if (req.target.type === TargetType.Entity) {
-                                (this.Deck as any)[(req.action as SetDataRequest).field] = (req.action as SetDataRequest).value;
-                            }
-                        }
-                    }
+            if("!playCard" == req.action.field) {
+                let result = req.action.value;
+                if (req.invoker == "") {
+                    this.Deck.PlayCardFromDeckOnStack(req.target.id, result.card, result.revealed);
                 } else {
-                    // default to game scope
-                    (this as any)[req.action.field] = req.action.value;
+                    this.players.forEach((p) => {
+                        if (p.getName() == req.invoker) {
+                            console.log("Play Card from player: " + req.invoker);
+                            this.Deck.Game = this as SVEGame;
+                            this.Deck.PlayCardByNameOnStack(req.target.id, result.card, p, result.revealed);
+                            this.GUI.PlayerList.UpdatePlayer(p);
+                        }
+                    });
                 }
+                return;
+            }
+
+            if("!playDirection" == req.action.field) {
+                this.playDirection = Number(req.action.value);
+                this.onGameDirectionChanged();
+            }
+
+            if("!nextTurn" == req.action.field) {
+                let p = this.players.find(e => e.getName() == (req.action as SetDataRequest).value as string);
+
+                this.onPlayersRoundBegin(p);
+                if (this.localPlayer.getName() == (req.action as SetDataRequest).value as string) {
+                    this.StartLocalPlayersRound();
+                }
+                return;
+            }
+
+            if (req.action.field === "!notify") {
+                this.onNotify(req.action.value as string, this.players.find(p => p.getName() == req.invoker), this.players.find(p => p.getName() == req.target.id));
+                return;
             }
         }
-    }
-
-    public onEnd() {
-        console.log("Socket closed!");
-        this.bIsRunning = false;
-        this.OnSelect(null, null);
     }
 
     public UpdateGameDirection(dir: number): void {
         this.playDirection = dir;
         this.sendGameRequest({
             action: { 
-                field: "playDirection",
+                field: "!playDirection",
                 value: this.playDirection
             },
             invoker: this.localPlayer.getName(),
@@ -1129,21 +1063,11 @@ export abstract class CardGame extends BaseGame implements Commandable {
                 id: ""
             }
         });
+        this.onGameDirectionChanged();
     }
 
-    // player null means the next one
-    public NotifyPlayer(player: Player, notification: String): void {
-        this.sendGameRequest({
-            action: { 
-                field: "!notify",
-                value: notification
-            },
-            invoker: this.localPlayer.getName(),
-            target: {
-                type: TargetType.Player,
-                id: player.getName()
-            }
-        });
+    protected onGameDirectionChanged() {
+
     }
 
     public GetLocalPlayDirection(): number {
@@ -1152,97 +1076,6 @@ export abstract class CardGame extends BaseGame implements Commandable {
 
     public GetLocalPlayerID(): String {
         return this.localPlayer.GetID();
-    }
-
-    public OnServerResponse(result: any): void {
-        /*if (result.type == "addPlayer") {
-            this.AddPlayer(result.player, false);
-            return;
-        }
-
-        if (result.type == "PlayerWelcome") {
-            if (result.Succeeded) {
-                // nothing to do
-            }
-            else {
-                this.OnGameRejected(GameRejectReason.PlayerLimitExceeded);
-            }
-            
-            return;
-        }
-
-        if (result.type == "gameState") {
-            let gs: GameState = (result.value == "lost") ? GameState.Lost : GameState.Won;
-            
-            if (result.player == this.localPlayer.GetID()) {
-                this.localPlayer.SetGameState(gs);
-            }
-
-            return;
-        }
-
-        if (result.type == "updatePlayer") {
-            this.players.forEach(p => {
-                if(p.GetID() == result.player) {
-                    if (result.field == "maxCardCount")
-                        p.SetMaxCardCount(result.value);
-                    this.GUI.PlayerList.UpdatePlayer(p);
-                }
-            });
-
-            return;
-        }
-
-        if (result.type == "updateGame") {
-            this.playDirection = result.playDirection;
-
-            return;
-        }
-
-        if (result.type == "playCard") {
-            if (result.player == "") {
-                this.Deck.PlayCardFromDeckOnStack(result.stack, result.card, result.revealed);
-            } else {
-                this.players.forEach((p) => {
-                    if (p.GetID() == result.player) {
-                        console.log("Play Card from player: " + result.player);
-                        this.Deck.Game = this;
-                        this.Deck.PlayCardByNameOnStack(result.stack, result.card, p, result.revealed);
-                        this.GUI.PlayerList.UpdatePlayer(p);
-                    }
-                });
-            }
-            return;
-        }
-
-        if (result.type == "drawCard") {
-            this.players.forEach((p) => {
-                if (p.GetID() == result.player) {
-                    this.Deck.Game = this;
-                    this.Deck.GiveCardByNameTo(result.card, p);
-                    this.GUI.PlayerList.UpdatePlayer(p);
-                }
-            });
-            return;
-        }
-
-        if (result.type == "startGame") {
-            this.StartGame();
-            if (this.bIsRunning)
-                this.OnSelect(null, null);
-            return;
-        }
-
-        if (result.type == "nextTurn") {
-            if (this.localPlayer.GetID() == result.player) {
-                this.StartLocalPlayersRound();
-            }
-    
-            return;
-        }
-
-        //console.log("Unknown response:" + JSON.stringify(result));
-        */
     }
 
     public OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo) {
@@ -1258,13 +1091,11 @@ export abstract class CardGame extends BaseGame implements Commandable {
         }
     }
 
-    public EndGame(): void {
-        this.sendGameRequest({
-            action: "!endGame",
-            invoker: this.localPlayer.getName()
-        });
-
-        this.bIsRunning = false;
+    public onEnd(): void {
+        super.onEnd();
+        if(this.IsRunning()) {
+            this.OnSelect(null, null);
+        }
         this.players.forEach(p => { p.SetPhase(PlayerGamePhase.Spectating); });
     }
 

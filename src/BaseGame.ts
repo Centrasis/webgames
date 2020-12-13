@@ -1,11 +1,6 @@
 import * as BABYLON from 'babylonjs';
 import { GameRequest, SVEAccount, SVEGame } from 'svebaselib';
 
-export enum GameRejectReason {
-    GameNotPresent,
-    PlayerLimitExceeded
-}
-
 export interface Commandable {
     executeCommand(cmd: string, req: GameRequest);
 }
@@ -13,17 +8,10 @@ export interface Commandable {
 export default abstract class BaseGame extends SVEGame {
     public abstract CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     public abstract Tick(): void;
-    public abstract AddPlayer(user: SVEAccount, isLocal: Boolean): void;
-    public abstract IsRunning(): Boolean;
-    public abstract StartGame(): void;
-    public abstract EndGame(): void;
-    public abstract IsHostInstance(): Boolean;
+//    public abstract AddPlayer(user: SVEAccount, isLocal: Boolean): void;
     public abstract MinPlayers(): number;
     public abstract GetPlayersCount(): number;
-    public abstract GiveUp(): void
-    public OnConnected: (success: Boolean) => void;
     public OnNewPlayer: () => void;
-    public OnGameRejected?: (reason: GameRejectReason) => void;
 
     public MaxPlayers(): number {
         return this.maxPlayers;

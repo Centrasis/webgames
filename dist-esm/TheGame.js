@@ -232,7 +232,7 @@ var TheGame = /** @class */ (function (_super) {
         this.GUI.SetEnabledNextRoundBtn(false);
     };
     TheGame.prototype.StartGame = function () {
-        if (this.bIsHosting) {
+        if (this.IsHostInstance()) {
             var cardsCount = 8;
             if (this.players.length == 2) {
                 cardsCount = 7;
@@ -302,53 +302,52 @@ var TheGame = /** @class */ (function (_super) {
     };
     TheGame.prototype.Tick = function () {
     };
-    TheGame.prototype.AddPlayer = function (id, isLocal, player) {
-        if (player === void 0) { player = null; }
-        _super.prototype.AddPlayer.call(this, id, isLocal);
-        if (isLocal) {
+    TheGame.prototype.onJoined = function (id) {
+        _super.prototype.onJoined.call(this, id);
+        if (id.getName() == this.localUser.getName()) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
         this.Deck.Game = this;
         this.GUI.GameID = this.gameID;
         this.GUI.Game = this;
     };
-    TheGame.prototype.executeCommand = function (cmd, req) {
-        _super.prototype.executeCommand.call(this, cmd, req);
-        if ("!vote" == cmd) {
-            if (this.bIsHosting) {
-                var result = req.action.value;
-                if (result.voteID == "PlayerStart") {
-                    console.log("Got voting result for player start: " + result.value);
-                    this.sendGameRequest({
-                        action: {
-                            field: "!setTurn",
-                            value: result.value,
-                        },
-                        invoker: String(this.GetLocalPlayerID())
-                    });
-                }
-            }
-            return;
-        }
-    };
     TheGame.prototype.onRequest = function (req) {
         _super.prototype.onRequest.call(this, req);
+        this.SetGameState(this.CheckGameState());
         if (typeof req.action !== "string") {
-            if (req.action.field == "gameState") {
-                if (this.gameState !== GameState.Undetermined) {
-                    this.GUI.ShowGameState(this.gameState);
-                    this.EndGame();
+            if ("!vote" == req.action.field) {
+                if (this.IsHostInstance()) {
+                    var result = req.action.value;
+                    if (result.voteID == "PlayerStart") {
+                        console.log("Got voting result for player start: " + result.value);
+                        this.sendGameRequest({
+                            action: {
+                                field: "!setTurn",
+                                value: result.value,
+                            },
+                            invoker: String(this.GetLocalPlayerID())
+                        });
+                    }
                 }
                 return;
             }
-            if (req.action.field == "!nextTurn") {
-                this.GUI.PlayerList.SetPlayerActive(this.players.find(function (e) { return e.getName() == req.target.id; }));
-                this.GUI.UpdateCardCounter(this.Deck.GetNumberOfCardsInDeck());
-                if (req.target.id == this.localPlayer.getName()) {
-                    this.GUI.RememberItsYourTurn();
-                }
-                return;
-            }
+        }
+    };
+    TheGame.prototype.onPlayersRoundBegin = function (player) {
+        _super.prototype.onPlayersRoundBegin.call(this, player);
+        this.GUI.PlayerList.SetPlayerActive(player);
+        this.GUI.UpdateCardCounter(this.Deck.GetNumberOfCardsInDeck());
+        if (player.getName() == this.localPlayer.getName()) {
+            this.GUI.RememberItsYourTurn();
+        }
+    };
+    TheGame.prototype.OnGameStateChange = function (gameState) {
+        _super.prototype.OnGameStateChange.call(this, gameState);
+        if (gameState != GameState.Undetermined) {
+            this.GUI.ShowGameState(gameState);
+            this.localPlayer.Game = this;
+            this.localPlayer.SetGameState(gameState);
+            this.EndGame();
         }
     };
     /*
@@ -425,13 +424,6 @@ var TheGame = /** @class */ (function (_super) {
         }
         if (this.localPlayer.GetMaxCardCount() - this.localPlayer.GetCardsCount() >= 2) {
             this.GUI.SetEnabledNextRoundBtn(true);
-        }
-        var gameState = this.CheckGameState();
-        if (gameState != GameState.Undetermined) {
-            this.GUI.ShowGameState(gameState);
-            this.localPlayer.Game = this;
-            this.localPlayer.SetGameState(gameState);
-            this.EndGame();
         }
     };
     TheGame.prototype.MinPlayers = function () {

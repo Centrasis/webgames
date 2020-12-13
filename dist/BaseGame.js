@@ -13,13 +13,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GameRejectReason = void 0;
 var svebaselib_1 = require("svebaselib");
-var GameRejectReason;
-(function (GameRejectReason) {
-    GameRejectReason[GameRejectReason["GameNotPresent"] = 0] = "GameNotPresent";
-    GameRejectReason[GameRejectReason["PlayerLimitExceeded"] = 1] = "PlayerLimitExceeded";
-})(GameRejectReason = exports.GameRejectReason || (exports.GameRejectReason = {}));
 var BaseGame = /** @class */ (function (_super) {
     __extends(BaseGame, _super);
     function BaseGame() {

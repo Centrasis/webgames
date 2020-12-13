@@ -1,7 +1,6 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import { GameRejectReason} from './BaseGame';
 import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
 import { isUndefined } from 'util';
 import { SVEGame, GameState, GameInfo, SVEAccount, GameRequest, SetDataRequest } from 'svebaselib';
@@ -259,7 +258,7 @@ class TheGame extends CardGame {
     }
 
     public StartGame(): void {
-        if (this.bIsHosting) {
+        if (this.IsHostInstance()) {
             let cardsCount = 8;
             if(this.players.length == 2) {
                 cardsCount = 7;
@@ -353,10 +352,10 @@ class TheGame extends CardGame {
         
     }
 
-    public AddPlayer(id: SVEAccount, isLocal: Boolean, player: Player = null): void {
-        super.AddPlayer(id, isLocal);
+    public onJoined(id: SVEAccount): void {
+        super.onJoined(id);
 
-        if(isLocal) {
+        if(id.getName() == this.localUser!.getName()) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
 
@@ -365,48 +364,49 @@ class TheGame extends CardGame {
         this.GUI.Game = this;
     }
 
-    public executeCommand(cmd: string, req: GameRequest) {
-        super.executeCommand(cmd, req);
+    public onRequest(req: GameRequest) {
+        super.onRequest(req);
+        this.SetGameState(this.CheckGameState());
 
-        if("!vote" == cmd) {
-            if (this.bIsHosting) {
-                let result = (req.action as SetDataRequest).value;
-                if (result.voteID == "PlayerStart") {
-                    console.log("Got voting result for player start: " + result.value);
-
-                    this.sendGameRequest({
-                        action: {
-                            field: "!setTurn",
-                            value: result.value,
-                        },
-                        invoker: String(this.GetLocalPlayerID())
-                    });
+        if(typeof req.action !== "string") {
+            if("!vote" == req.action.field) {
+                if (this.IsHostInstance()) {
+                    let result = req.action.value;
+                    if (result.voteID == "PlayerStart") {
+                        console.log("Got voting result for player start: " + result.value);
+    
+                        this.sendGameRequest({
+                            action: {
+                                field: "!setTurn",
+                                value: result.value,
+                            },
+                            invoker: String(this.GetLocalPlayerID())
+                        });
+                    }
                 }
+                return;
             }
-            return;
         }
     }
 
-    public onRequest(req: GameRequest) {
-        super.onRequest(req);
+    protected onPlayersRoundBegin(player: Player) {
+        super.onPlayersRoundBegin(player);
+        this.GUI.PlayerList.SetPlayerActive(player);
+        this.GUI.UpdateCardCounter(this.Deck.GetNumberOfCardsInDeck());
+        if(player.getName() == this.localPlayer.getName()) {
+            this.GUI.RememberItsYourTurn();
+        }
+    }
 
-        if(typeof req.action !== "string") {
-            if(req.action.field == "gameState") {
-                if(this.gameState !== GameState.Undetermined) {
-                    this.GUI.ShowGameState(this.gameState);
-                    this.EndGame();
-                }
-                return;
-            }
+    protected OnGameStateChange(gameState: GameState) {
+        super.OnGameStateChange(gameState);
+        if (gameState != GameState.Undetermined) {
+            this.GUI.ShowGameState(gameState); 
 
-            if (req.action.field == "!nextTurn") {
-                this.GUI.PlayerList.SetPlayerActive(this.players.find(e => e.getName() == req.target.id));
-                this.GUI.UpdateCardCounter(this.Deck.GetNumberOfCardsInDeck());
-                if(req.target.id == this.localPlayer.getName()) {
-                    this.GUI.RememberItsYourTurn();
-                }
-                return;
-            }
+            this.localPlayer.Game = this;
+            this.localPlayer.SetGameState(gameState);
+
+            this.EndGame();
         }
     }
 
@@ -488,16 +488,6 @@ class TheGame extends CardGame {
 
         if(this.localPlayer.GetMaxCardCount() - this.localPlayer.GetCardsCount() >= 2) {
             this.GUI.SetEnabledNextRoundBtn(true);
-        }
-
-        let gameState = this.CheckGameState();
-        if (gameState != GameState.Undetermined) {
-            this.GUI.ShowGameState(gameState); 
-
-            this.localPlayer.Game = this;
-            this.localPlayer.SetGameState(gameState);
-
-            this.EndGame();
         }
     }
 

@@ -448,7 +448,7 @@ var UNO = /** @class */ (function (_super) {
     };
     UNO.prototype.StartGame = function () {
         var _this = this;
-        if (this.bIsHosting) {
+        if (this.IsHostInstance()) {
             this.Deck.Game = this;
             this.Deck.revealFirstCard();
             this.SetInitialCardCount(7);
@@ -510,69 +510,79 @@ var UNO = /** @class */ (function (_super) {
     };
     UNO.prototype.Tick = function () {
     };
-    UNO.prototype.AddPlayer = function (id, isLocal, player) {
-        if (player === void 0) { player = null; }
-        _super.prototype.AddPlayer.call(this, id, isLocal);
-        if (isLocal) {
+    UNO.prototype.onPlayersRoundBegin = function (player) {
+        _super.prototype.onPlayersRoundBegin.call(this, player);
+        this.GUI.PlayerList.SetPlayerActive(player);
+    };
+    UNO.prototype.onJoined = function (id) {
+        _super.prototype.onJoined.call(this, id);
+        if (id.getName() == this.localUser.getName()) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
         this.Deck.Game = this;
         this.GUI.GameID = this.gameID;
         this.GUI.Game = this;
     };
-    UNO.prototype.OnServerResponse = function (result) {
-        _super.prototype.OnServerResponse.call(this, result);
-        if (result.type == "vote") {
-            if (result.voteID == "ColorWish") {
-                console.log("Got voting result for wish: " + result.value);
-                var wishColor = CardColor.Red;
-                if (result.value == "Grün") {
-                    wishColor = CardColor.Green;
-                }
-                if (result.value == "Gelb") {
-                    wishColor = CardColor.Yellow;
-                }
-                if (result.value == "Blau") {
-                    wishColor = CardColor.Blue;
-                }
-                this.Deck.ResolveWish(wishColor);
-            }
-            return;
-        }
-        if (result.type == "gameState") {
-            var gs = this.CheckGameState();
-            this.GUI.ShowGameState(gs);
+    UNO.prototype.OnGameStateChange = function (state) {
+        _super.prototype.OnGameStateChange.call(this, state);
+        if (state !== GameState.Undetermined) {
+            this.GUI.ShowGameState(state);
             this.EndGame();
-            return;
         }
-        if (result.type == "updatePlayer") {
-            if (this.bIsHosting) {
-                this.players.forEach(function (p) {
-                    if (p.GetID() == result.player) {
-                        console.log("Initial draw card for: " + p.GetID());
+    };
+    UNO.prototype.onRequest = function (result) {
+        _super.prototype.onRequest.call(this, result);
+        if (typeof result.action !== "string") {
+            if (result.action.field == "vote") {
+                if (result.action.value.voteID == "ColorWish") {
+                    console.log("Got voting result for wish: " + result.action.value.vote);
+                    var wishColor = CardColor.Red;
+                    if (result.action.value.vote == "Grün") {
+                        wishColor = CardColor.Green;
                     }
-                });
+                    if (result.action.value.vote == "Gelb") {
+                        wishColor = CardColor.Yellow;
+                    }
+                    if (result.action.value.vote == "Blau") {
+                        wishColor = CardColor.Blue;
+                    }
+                    this.Deck.ResolveWish(wishColor);
+                }
+                return;
+            }
+        }
+        else {
+            if (result.action == "!updatePlayer") {
+                if (this.IsHostInstance()) {
+                    this.players.forEach(function (p) {
+                        if (p.getName() == result.target.id) {
+                            console.log("Initial draw card for: " + p.getName());
+                        }
+                    });
+                    this.isSetup = true;
+                }
+                if (this.IsRunning())
+                    this.OnSelect(null, null);
+                return;
+            }
+            if (result.action == "!drawCard") {
                 this.isSetup = true;
             }
-            if (this.bIsRunning)
-                this.OnSelect(null, null);
-            return;
         }
-        if (result.type == "drawCard") {
-            this.isSetup = true;
-        }
-        if (result.type == "nextTurn") {
-            this.GUI.PlayerList.SetPlayerActive(this.players.find(function (e) { return e.GetID() == result.player; }));
-            return;
-        }
-        if (result.type == "notifyPlayer") {
-            if (result.notification == "draw2!") {
+        console.log("Unknown response:" + JSON.stringify(result));
+    };
+    UNO.prototype.onNotify = function (notification, invoker, target) {
+        _super.prototype.onNotify.call(this, notification, invoker, target);
+        if (target !== undefined && target.getName() == this.localUser.getName()) {
+            if (notification == "draw2!") {
                 this.localPlayer.drawNumberOfCards(this.Deck.GetDrawStack(), 2);
+                this.OnEndLocalRound();
             }
-            if (result.notification == "draw4!") {
+            if (notification == "draw4!") {
                 this.localPlayer.drawNumberOfCards(this.Deck.GetDrawStack(), 4);
+                this.OnEndLocalRound();
             }
-            if (result.notification == "suspend!") {
+            if (notification == "suspend!") {
                 if (this.localPlayer.GetPhase() == PlayerGamePhase.Spectating) {
                     this.bIsSuspended = true;
                 }
@@ -580,9 +590,7 @@ var UNO = /** @class */ (function (_super) {
                     this.OnEndLocalRound();
                 }
             }
-            return;
         }
-        console.log("Unknown response:" + JSON.stringify(result));
     };
     UNO.prototype.OnSelect = function (evt, pickInfo) {
         _super.prototype.OnSelect.call(this, evt, pickInfo);
@@ -603,13 +611,6 @@ var UNO = /** @class */ (function (_super) {
                     }
                 }
             }
-        }
-        var gameState = this.CheckGameState();
-        if (gameState != GameState.Undetermined) {
-            this.GUI.ShowGameState(gameState);
-            this.localPlayer.Game = this;
-            this.localPlayer.SetGameState(gameState);
-            this.EndGame();
         }
     };
     UNO.prototype.MinPlayers = function () {

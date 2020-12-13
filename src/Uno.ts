@@ -3,7 +3,8 @@ import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
 import { MixMaterial } from 'babylonjs-materials';
-import { SVEGame, GameState, GameInfo, SVEAccount } from 'svebaselib';
+import { SVEGame, GameState, GameInfo, SVEAccount, GameRequest } from 'svebaselib';
+import { Action } from 'babylonjs';
 
 enum CardType {
     Number = "Number",
@@ -506,7 +507,7 @@ class UNO extends CardGame {
     }
 
     public StartGame(): void {
-        if (this.bIsHosting) {
+        if (this.IsHostInstance()) {
             this.Deck.Game = this;
             (<UNOCardDeck>this.Deck).revealFirstCard();
 
@@ -584,10 +585,15 @@ class UNO extends CardGame {
         
     }
 
-    public AddPlayer(id: SVEAccount, isLocal: Boolean, player: Player = null): void {
-        super.AddPlayer(id, isLocal);
+    protected onPlayersRoundBegin(player) {
+        super.onPlayersRoundBegin(player);
+        this.GUI.PlayerList.SetPlayerActive(player);
+    }
 
-        if(isLocal) {
+    public onJoined(id: SVEAccount): void {
+        super.onJoined(id);
+
+        if(id.getName() == this.localUser!.getName()) {
             this.localPlayer.SetOrigin(new BABYLON.Vector3(0, 1, -5.5));
         }
 
@@ -596,80 +602,80 @@ class UNO extends CardGame {
         this.GUI.Game = this;
     }
 
-    public OnServerResponse(result: any): void {
-        super.OnServerResponse(result);
-
-        if (result.type == "vote") {
-            if (result.voteID == "ColorWish") {
-                console.log("Got voting result for wish: " + result.value);
-                let wishColor: CardColor = CardColor.Red;
-                if (result.value == "Grün") {
-                    wishColor = CardColor.Green;
-                }
-                if (result.value == "Gelb") {
-                    wishColor = CardColor.Yellow;
-                }
-                if (result.value == "Blau") {
-                    wishColor = CardColor.Blue;
-                }
-                (<UNOCardDeck>this.Deck).ResolveWish(wishColor);
-            }
-            return;
-        }
-
-        if (result.type == "gameState") {
-            let gs: GameState = this.CheckGameState();
-            
-            this.GUI.ShowGameState(gs);
-
+    protected OnGameStateChange(state) {
+        super.OnGameStateChange(state);
+        
+        if (state !== GameState.Undetermined) {
+            this.GUI.ShowGameState(state);
             this.EndGame();
-
-            return;
         }
+    }
 
-        if (result.type == "updatePlayer") {
-            if (this.bIsHosting) {
-                this.players.forEach((p) => {
-                    if (p.GetID() == result.player)
-                    {
-                        console.log("Initial draw card for: " + p.GetID());
+    public onRequest(result: GameRequest): void {
+        super.onRequest(result);
+
+        if (typeof result.action !== "string") {
+            if (result.action.field == "vote") {
+                if (result.action.value.voteID == "ColorWish") {
+                    console.log("Got voting result for wish: " + result.action.value.vote);
+                    let wishColor: CardColor = CardColor.Red;
+                    if (result.action.value.vote == "Grün") {
+                        wishColor = CardColor.Green;
                     }
-                });
+                    if (result.action.value.vote == "Gelb") {
+                        wishColor = CardColor.Yellow;
+                    }
+                    if (result.action.value.vote == "Blau") {
+                        wishColor = CardColor.Blue;
+                    }
+                    (<UNOCardDeck>this.Deck).ResolveWish(wishColor);
+                }
+                return;
+            }
+        } else {
+            if (result.action == "!updatePlayer") {
+                if (this.IsHostInstance()) {
+                    this.players.forEach((p) => {
+                        if (p.getName() == result.target.id)
+                        {
+                            console.log("Initial draw card for: " + p.getName());
+                        }
+                    });
+                    this.isSetup = true;
+                }
+
+                if (this.IsRunning())
+                    this.OnSelect(null, null);
+                return;
+            }
+
+            if (result.action == "!drawCard") {
                 this.isSetup = true;
             }
-
-            if (this.bIsRunning)
-                this.OnSelect(null, null);
-            return;
         }
+        console.log("Unknown response:" + JSON.stringify(result));
+    }
 
-        if (result.type == "drawCard") {
-            this.isSetup = true;
-        }
+    protected onNotify(notification: string, invoker: Player, target?: Player) {
+        super.onNotify(notification, invoker, target);
 
-        if (result.type == "nextTurn") {
-            this.GUI.PlayerList.SetPlayerActive(this.players.find(e => e.GetID() == result.player));
-            return;
-        }
-
-        if (result.type == "notifyPlayer") {
-            if (result.notification == "draw2!") {
+        if (target !== undefined && target.getName() == this.localUser!.getName()) {
+            if (notification == "draw2!") {
                 this.localPlayer.drawNumberOfCards((<UNOCardDeck>this.Deck).GetDrawStack(), 2);
+                this.OnEndLocalRound();
             }
-            if (result.notification == "draw4!") {
+            if (notification == "draw4!") {
                 this.localPlayer.drawNumberOfCards((<UNOCardDeck>this.Deck).GetDrawStack(), 4);
+                this.OnEndLocalRound();
             }
-            if (result.notification == "suspend!") {
+            if (notification == "suspend!") {
                 if(this.localPlayer.GetPhase() == PlayerGamePhase.Spectating) {
                     this.bIsSuspended = true;
                 } else {
                     this.OnEndLocalRound();
                 }
             }
-            return;
         }
-
-        console.log("Unknown response:" + JSON.stringify(result));
     }
 
     public OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo) {
@@ -692,16 +698,6 @@ class UNO extends CardGame {
                     }
                 }
             }
-        }
-
-        let gameState = this.CheckGameState();
-        if (gameState != GameState.Undetermined) {
-            this.GUI.ShowGameState(gameState); 
-
-            this.localPlayer.Game = this;
-            this.localPlayer.SetGameState(gameState);
-
-            this.EndGame();
         }
     }
 

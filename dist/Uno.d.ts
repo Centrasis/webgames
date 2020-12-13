@@ -1,7 +1,7 @@
 import * as BABYLON from 'babylonjs';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, CardGame, Player, VotingUI } from './CardGame';
-import { SVEGame, GameState, GameInfo, SVEAccount } from 'svebaselib';
+import { SVEGame, GameState, GameInfo, SVEAccount, GameRequest } from 'svebaselib';
 declare class UNOGUI extends BaseGameGUI {
     protected GameStateText: GUI.TextBlock;
     AVotingUI: VotingUI;
@@ -30,8 +30,11 @@ declare class UNO extends CardGame {
     CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     OnForceEndRound(): void;
     Tick(): void;
-    AddPlayer(id: SVEAccount, isLocal: Boolean, player?: Player): void;
-    OnServerResponse(result: any): void;
+    protected onPlayersRoundBegin(player: any): void;
+    onJoined(id: SVEAccount): void;
+    protected OnGameStateChange(state: any): void;
+    onRequest(result: GameRequest): void;
+    protected onNotify(notification: string, invoker: Player, target?: Player): void;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     MinPlayers(): number;
     MaxPlayers(): number;

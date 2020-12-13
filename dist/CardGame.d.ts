@@ -1,7 +1,7 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import BaseGame, { Commandable } from './BaseGame';
+import BaseGame from './BaseGame';
 import { SVEAccount, SVEGame, GameState, GameInfo, GameRequest } from 'svebaselib';
 export declare enum PlayerGamePhase {
     Spectating = 0,
@@ -148,42 +148,36 @@ export declare class BaseGameGUI {
     constructor(scene: BABYLON.Scene);
     RememberItsYourTurn(): void;
 }
-export declare abstract class CardGame extends BaseGame implements Commandable {
+export declare abstract class CardGame extends BaseGame {
     private playDirection;
     protected scene: BABYLON.Scene;
     protected camera: BABYLON.FreeCamera;
     protected players: Player[];
+    protected playerIndexThatHasTurn: number;
     protected Deck: BaseCardDeck;
     protected localPlayer: Player;
-    protected bIsRunning: Boolean;
     protected gameID: String;
-    protected bIsHosting: Boolean;
     protected highlightLayer: BABYLON.HighlightLayer;
     protected GUI: BaseGameGUI;
     protected enableZMovement: boolean;
     constructor(info: GameInfo);
-    abstract CheckGameState(): GameState;
+    CheckGameState(): GameState;
     StartLocalPlayersRound(): void;
     SetInitialCardCount(cardsCount: number): void;
-    StartGame(): void;
-    IsRunning(): Boolean;
-    IsHostInstance(): Boolean;
+    onStart(): void;
     CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     protected OnEndLocalRound(): void;
-    GiveUp(): void;
     InvokeNextPlayerRound(): void;
-    AddPlayer(user: SVEAccount, isLocal: Boolean, player?: Player): void;
-    onJoined(): void;
-    executeCommand(cmd: string, req: GameRequest): void;
+    onJoined(user: SVEAccount): void;
+    protected onPlayersRoundBegin(player: Player): void;
+    protected onNotify(notification: string, invoker: Player, target?: Player): void;
     onRequest(req: GameRequest): void;
-    onEnd(): void;
     UpdateGameDirection(dir: number): void;
-    NotifyPlayer(player: Player, notification: String): void;
+    protected onGameDirectionChanged(): void;
     GetLocalPlayDirection(): number;
     GetLocalPlayerID(): String;
-    OnServerResponse(result: any): void;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
-    EndGame(): void;
+    onEnd(): void;
     GetPlayersCount(): number;
 }
 //# sourceMappingURL=CardGame.d.ts.map

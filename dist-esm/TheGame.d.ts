@@ -34,9 +34,10 @@ declare class TheGame extends CardGame {
     protected OnEndLocalRound(): void;
     protected CreateMaterialForCard(nb: number): void;
     Tick(): void;
-    AddPlayer(id: SVEAccount, isLocal: Boolean, player?: Player): void;
-    executeCommand(cmd: string, req: GameRequest): void;
+    onJoined(id: SVEAccount): void;
     onRequest(req: GameRequest): void;
+    protected onPlayersRoundBegin(player: Player): void;
+    protected OnGameStateChange(gameState: GameState): void;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     MinPlayers(): number;
 }
