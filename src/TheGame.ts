@@ -288,7 +288,7 @@ class TheGame extends CardGame {
 
     public ShowVotePlayerStartGUI() {
         console.log("Vote for the player to start.");
-        this.votesList = []
+        this.votesList = [];
         this.GUI.Game = this;
         this.GUI.GameID = this.gameID;
         this.GUI.ShowVotePlayerStart();
