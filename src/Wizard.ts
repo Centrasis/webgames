@@ -3,7 +3,8 @@ import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
 import { MixMaterial } from 'babylonjs-materials';
-import {GameInfo, GameRequest, GameState, SVEAccount, SVEGame, TargetType} from 'svebaselib';
+import {GameInfo, GameRequest, GameState, SVEAccount, TargetType} from 'svebaselib';
+import {SVEGame} from './BaseGame';
 
 enum CardType {
     Number = "Number",

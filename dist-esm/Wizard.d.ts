@@ -1,7 +1,8 @@
 import * as BABYLON from 'babylonjs';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, CardGame, Player, VotingUI } from './CardGame';
-import { GameInfo, GameRequest, GameState, SVEAccount, SVEGame } from 'svebaselib';
+import { GameInfo, GameRequest, GameState, SVEAccount } from 'svebaselib';
+import { SVEGame } from './BaseGame';
 declare class WizardGUI extends BaseGameGUI {
     protected GameStateText: GUI.TextBlock;
     AVotingUI: VotingUI;

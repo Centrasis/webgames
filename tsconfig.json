@@ -14,7 +14,8 @@
     "rootDir": "src"
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "node_modules/peerjs/dist/peerjs.js"
   ],
   "exclude": [
     "node_modules",

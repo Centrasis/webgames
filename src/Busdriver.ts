@@ -2,8 +2,8 @@ import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
-import { isUndefined } from 'util';
-import { SVEAccount, SVEGame, TargetType, GameState, GameRequest, SetDataRequest } from 'svebaselib';
+import {SVEGame} from './BaseGame';
+import { SVEAccount, TargetType, GameState, GameRequest, SetDataRequest } from 'svebaselib';
 
 enum CardType {
     Number = "Number",
@@ -1081,7 +1081,7 @@ class Busdriver extends CardGame {
             if (this.localPlayer.GetSelectedCard() != null) {
                 if(pickInfo != null && this.localPlayer.GetPhase() != PlayerGamePhase.Spectating) {
                     let stack = this.Deck.GetStackFromPick(pickInfo);
-                    if (!isUndefined(stack) && stack != null) {
+                    if (stack !== undefined && stack != null) {
                         if (stack.GetID() == (<BusdriverCardDeck>this.Deck).GetPyramidStack().GetID()) {
                             stack.Game = this;
                             stack.PlayCardOnStack(this.localPlayer);

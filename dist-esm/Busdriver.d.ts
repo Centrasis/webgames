@@ -1,7 +1,8 @@
 import * as BABYLON from 'babylonjs';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, CardGame, Player, VotingUI } from './CardGame';
-import { SVEAccount, SVEGame, GameState, GameRequest } from 'svebaselib';
+import { SVEGame } from './BaseGame';
+import { SVEAccount, GameState, GameRequest } from 'svebaselib';
 declare class Challenge {
     CardValue: number;
     ChallengeText: string;

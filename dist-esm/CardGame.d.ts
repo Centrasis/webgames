@@ -1,8 +1,8 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import BaseGame from './BaseGame';
-import { SVEAccount, SVEGame, GameState, GameInfo, GameRequest } from 'svebaselib';
+import BaseGame, { SVEGame } from './BaseGame';
+import { SVEAccount, GameState, GameInfo, GameRequest } from 'svebaselib';
 export declare enum PlayerGamePhase {
     Spectating = 0,
     SelectingCard = 1,

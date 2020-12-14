@@ -37,7 +37,6 @@ var BABYLON = __importStar(require("babylonjs"));
 var Materials = __importStar(require("babylonjs-materials"));
 var GUI = __importStar(require("babylonjs-gui"));
 var CardGame_1 = require("./CardGame");
-var util_1 = require("util");
 var svebaselib_1 = require("svebaselib");
 var CardType;
 (function (CardType) {
@@ -974,7 +973,7 @@ var Busdriver = /** @class */ (function (_super) {
             if (this.localPlayer.GetSelectedCard() != null) {
                 if (pickInfo != null && this.localPlayer.GetPhase() != CardGame_1.PlayerGamePhase.Spectating) {
                     var stack = this.Deck.GetStackFromPick(pickInfo);
-                    if (!util_1.isUndefined(stack) && stack != null) {
+                    if (stack !== undefined && stack != null) {
                         if (stack.GetID() == this.Deck.GetPyramidStack().GetID()) {
                             stack.Game = this;
                             stack.PlayCardOnStack(this.localPlayer);

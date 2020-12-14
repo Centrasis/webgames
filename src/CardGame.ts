@@ -1,8 +1,8 @@
 import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
-import BaseGame, {Commandable} from './BaseGame';
-import { SessionUserInitializer, SVEAccount, SVEGame, GameState, TargetType, SetDataRequest, ActionTarget, GameInfo, GameRequest, BasicUserInitializer, GameRejectReason } from 'svebaselib';
+import BaseGame, {Commandable, SVEGame} from './BaseGame';
+import { SessionUserInitializer, SVEAccount, GameState, TargetType, SetDataRequest, ActionTarget, GameInfo, GameRequest, BasicUserInitializer, GameRejectReason } from 'svebaselib';
 
 export enum PlayerGamePhase {
     Spectating,

@@ -15,7 +15,6 @@ import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, VotingUI, BaseCardDeck } from './CardGame';
-import { isUndefined } from 'util';
 import { TargetType, GameState } from 'svebaselib';
 var CardType;
 (function (CardType) {
@@ -952,7 +951,7 @@ var Busdriver = /** @class */ (function (_super) {
             if (this.localPlayer.GetSelectedCard() != null) {
                 if (pickInfo != null && this.localPlayer.GetPhase() != PlayerGamePhase.Spectating) {
                     var stack = this.Deck.GetStackFromPick(pickInfo);
-                    if (!isUndefined(stack) && stack != null) {
+                    if (stack !== undefined && stack != null) {
                         if (stack.GetID() == this.Deck.GetPyramidStack().GetID()) {
                             stack.Game = this;
                             stack.PlayCardOnStack(this.localPlayer);

@@ -2,7 +2,8 @@ import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, CardGame, Player, VotingUI } from './CardGame';
-import { SVEGame, GameState, GameInfo, SVEAccount, GameRequest } from 'svebaselib';
+import { SVEGame } from './BaseGame';
+import { GameState, GameInfo, SVEAccount, GameRequest } from 'svebaselib';
 declare class TheGameGUI extends BaseGameGUI {
     protected EndRoundBtn: GUI.Button;
     protected GameStateText: GUI.TextBlock;

@@ -2,8 +2,8 @@ import * as BABYLON from 'babylonjs';
 import * as Materials from 'babylonjs-materials';
 import * as GUI from 'babylonjs-gui';
 import { BaseGameGUI, PlayerGamePhase, CardGame, CardStack, StackDirection, StackType, Card, Player, PlayerListUI, VotingUI, BaseCardDeck} from './CardGame';
-import { isUndefined } from 'util';
-import { SVEGame, GameState, GameInfo, SVEAccount, GameRequest, SetDataRequest } from 'svebaselib';
+import {SVEGame} from './BaseGame';
+import { GameState, GameInfo, SVEAccount, GameRequest, SetDataRequest } from 'svebaselib';
 
 class TheGameCardDeck extends BaseCardDeck {
 
