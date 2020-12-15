@@ -206,6 +206,7 @@ var TheGame = /** @class */ (function (_super) {
         var _this = _super.call(this, info) || this;
         _this.gameType = "TheGame";
         _this.votesList = [];
+        _this.maxPlayers = 6;
         _this.gameType = "TheGame";
         return _this;
     }

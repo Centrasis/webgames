@@ -212,6 +212,7 @@ class TheGame extends CardGame {
 
     constructor (info: GameInfo) {
         super(info);
+        this.maxPlayers = 6;
         this.gameType = "TheGame";
     }
 
