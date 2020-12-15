@@ -716,6 +716,7 @@ export abstract class CardGame extends BaseGame {
         this.localPlayer = null;
         this.Deck = null;
         this.GUI = null;
+        this.gameID = info.name;
     }
 
     public CheckGameState(): GameState {
@@ -1072,7 +1073,7 @@ export abstract class CardGame extends BaseGame {
     }
 
     public GetLocalPlayerID(): String {
-        return this.localPlayer.GetID();
+        return this.localPlayer.getName();
     }
 
     public OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo) {

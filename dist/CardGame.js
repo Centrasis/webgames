@@ -604,6 +604,7 @@ var CardGame = /** @class */ (function (_super) {
         _this.localPlayer = null;
         _this.Deck = null;
         _this.GUI = null;
+        _this.gameID = info.name;
         return _this;
     }
     CardGame.prototype.CheckGameState = function () {
@@ -904,7 +905,7 @@ var CardGame = /** @class */ (function (_super) {
         return this.playDirection;
     };
     CardGame.prototype.GetLocalPlayerID = function () {
-        return this.localPlayer.GetID();
+        return this.localPlayer.getName();
     };
     CardGame.prototype.OnSelect = function (evt, pickInfo) {
         if (this.localPlayer == null)
