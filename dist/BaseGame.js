@@ -130,30 +130,24 @@ var SVEGame = /** @class */ (function () {
             }).then(function (response) {
                 if (response.status < 400) {
                     response.json().then(function (res) {
-                        if ("success" in res && res.success === false) {
-                            reject();
-                            return;
-                        }
-                        else {
-                            _this.hostPeerID = res.peerID;
-                            console.log("Try connect with host: " + _this.hostPeerID);
-                            _this.socket = new peerjs_1.default(_this.peerOpts);
-                            _this.bIsHost = false;
-                            _this.localUser = localPlayer;
-                            _this.setupPeerConnection(_this.hostPeerID).then(function (c) {
-                                _this.connections = [c];
-                                _this.OnConnected(true);
-                                _this.sendGameRequest({
-                                    action: "join",
-                                    target: {
-                                        type: svebaselib_1.TargetType.Game,
-                                        id: ""
-                                    },
-                                    invoker: _this.localUser.getName()
-                                });
-                            }, function (err) { return _this.OnConnected(false); });
-                            resolve();
-                        }
+                        _this.hostPeerID = res.peerID;
+                        console.log("Try connect with host: " + _this.hostPeerID);
+                        _this.socket = new peerjs_1.default(_this.peerOpts);
+                        _this.bIsHost = false;
+                        _this.localUser = localPlayer;
+                        _this.setupPeerConnection(_this.hostPeerID).then(function (c) {
+                            _this.connections = [c];
+                            _this.OnConnected(true);
+                            _this.sendGameRequest({
+                                action: "join",
+                                target: {
+                                    type: svebaselib_1.TargetType.Game,
+                                    id: ""
+                                },
+                                invoker: _this.localUser.getName()
+                            });
+                        }, function (err) { return _this.OnConnected(false); });
+                        resolve();
                     }, function (err) { return reject(err); });
                 }
                 else {

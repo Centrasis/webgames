@@ -132,29 +132,24 @@ export class SVEGame {
             }).then(response => {
                 if(response.status < 400) {
                     response.json().then(res => {
-                        if ("success" in res && res.success === false) {
-                            reject();
-                            return;
-                        } else {
-                            this.hostPeerID = (res as GameInfo).peerID!;
-                            console.log("Try connect with host: " + this.hostPeerID);
-                            this.socket = new Peer(this.peerOpts);
-                            this.bIsHost = false;
-                            this.localUser = localPlayer;
-                            this.setupPeerConnection(this.hostPeerID).then((c) => {
-                                this.connections = [c];
-                                this.OnConnected(true);
-                                this.sendGameRequest({
-                                    action: "join",
-                                    target: {
-                                        type: TargetType.Game,
-                                        id: ""
-                                    },
-                                    invoker: this.localUser.getName()
-                                });
-                            }, err => this.OnConnected(false));
-                            resolve();
-                        }
+                        this.hostPeerID = (res as GameInfo).peerID!;
+                        console.log("Try connect with host: " + this.hostPeerID);
+                        this.socket = new Peer(this.peerOpts);
+                        this.bIsHost = false;
+                        this.localUser = localPlayer;
+                        this.setupPeerConnection(this.hostPeerID).then((c) => {
+                            this.connections = [c];
+                            this.OnConnected(true);
+                            this.sendGameRequest({
+                                action: "join",
+                                target: {
+                                    type: TargetType.Game,
+                                    id: ""
+                                },
+                                invoker: this.localUser.getName()
+                            });
+                        }, err => this.OnConnected(false));
+                        resolve();
                     }, err => reject(err));
                 } else {
                     reject();
