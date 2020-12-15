@@ -332,8 +332,10 @@ var SVEGame = /** @class */ (function () {
             _this.bIsHost = true;
             _this.localUser = localPlayer;
             _this.playerList = [];
+            var resolved = false;
             _this.socket = new peerjs_1.default(_this.peerOpts);
             _this.socket.on('open', function (id) {
+                resolved = true;
                 _this.hostPeerID = id;
                 console.log("Got Peer ID: " + _this.hostPeerID);
                 _this.setupHostPeerConnection().then(function () {
@@ -359,7 +361,8 @@ var SVEGame = /** @class */ (function () {
             });
             _this.socket.on("error", function (err) {
                 console.log("Connection error (p2p)!");
-                reject();
+                if (!resolved)
+                    reject();
             });
         });
     };

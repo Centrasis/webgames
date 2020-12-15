@@ -344,9 +344,11 @@ export class SVEGame {
             this.bIsHost = true;
             this.localUser = localPlayer;
             this.playerList = [];
+            let resolved = false;
 
             this.socket = new Peer(this.peerOpts);
             this.socket.on('open', (id) => {
+                resolved = true;
                 this.hostPeerID = id;
                 console.log("Got Peer ID: " + this.hostPeerID);
 
@@ -372,7 +374,8 @@ export class SVEGame {
             });
             this.socket.on("error", (err) => {
                 console.log("Connection error (p2p)!");
-                reject();
+                if(!resolved)
+                    reject();
             });
         });
     }
