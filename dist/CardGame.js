@@ -806,6 +806,7 @@ var CardGame = /** @class */ (function (_super) {
         }
     };
     CardGame.prototype.onJoined = function (user) {
+        _super.prototype.onJoined.call(this, user);
         var isLocal = user.getName() === this.localUser.getName();
         if (isLocal) {
             console.log("On add new local player: " + user.getName());

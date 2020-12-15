@@ -959,6 +959,8 @@ export abstract class CardGame extends BaseGame {
     }
 
     public onJoined(user: SVEAccount): void {
+        super.onJoined(user);
+        
         let isLocal = user.getName() === this.localUser.getName();
         if (isLocal) {
             console.log("On add new local player: " + user.getName());

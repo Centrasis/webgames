@@ -331,6 +331,7 @@ var SVEGame = /** @class */ (function () {
         return new Promise(function (resolve, reject) {
             _this.socket = new peerjs_1.default(_this.peerOpts);
             _this.hostPeerID = _this.socket.id;
+            console.log("Got Peer ID: " + _this.hostPeerID);
             _this.bIsHost = true;
             _this.localUser = localPlayer;
             _this.playerList = [];
@@ -392,7 +393,7 @@ var SVEGame = /** @class */ (function () {
             maxPlayers: this.maxPlayers,
             name: this.name,
             gameState: this.gameState,
-            peerID: this.hostPeerID
+            peerID: (this.IsHostInstance()) ? this.socket.id : this.hostPeerID
         };
     };
     SVEGame.prototype.sendGameRequest = function (req) {

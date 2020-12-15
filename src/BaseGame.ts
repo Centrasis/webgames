@@ -343,6 +343,7 @@ export class SVEGame {
         return new Promise<void>((resolve, reject) => {
             this.socket = new Peer(this.peerOpts);
             this.hostPeerID = this.socket.id;
+            console.log("Got Peer ID: " + this.hostPeerID);
             this.bIsHost = true;
             this.localUser = localPlayer;
             this.playerList = [];
@@ -405,7 +406,7 @@ export class SVEGame {
             maxPlayers: this.maxPlayers,
             name: this.name,
             gameState: this.gameState,
-            peerID: this.hostPeerID
+            peerID: (this.IsHostInstance()) ? this.socket.id : this.hostPeerID
         }
     }
 
