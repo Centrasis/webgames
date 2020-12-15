@@ -81,6 +81,7 @@ export class SVEGame {
     }
 
     protected setupPeerConnection(peerID:string): Promise<Peer.DataConnection> {
+        console.log("Setup client connection..");
         return new Promise<Peer.DataConnection>((resolve, reject) => {
             this.conOpts.metadata = {
                 client: this.localUser!.getName(),
@@ -154,19 +155,28 @@ export class SVEGame {
                         this.socket = new Peer(this.peerOpts);
                         this.bIsHost = false;
                         this.localUser = localPlayer;
-                        this.setupPeerConnection(this.hostPeerID).then((c) => {
-                            this.connections = [c];
-                            this.OnConnected(true);
-                            this.sendGameRequest({
-                                action: "join",
-                                target: {
-                                    type: TargetType.Game,
-                                    id: ""
-                                },
-                                invoker: this.localUser.getName()
-                            });
-                        }, err => this.OnConnected(false));
-                        resolve();
+                        let resolved = false;
+                        this.socket.on("open", (id) => {
+                            resolved = true;
+                            this.setupPeerConnection(this.hostPeerID).then((c) => {
+                                this.connections = [c];
+                                this.OnConnected(true);
+                                this.sendGameRequest({
+                                    action: "join",
+                                    target: {
+                                        type: TargetType.Game,
+                                        id: ""
+                                    },
+                                    invoker: this.localUser.getName()
+                                });
+                            }, err => this.OnConnected(false));  
+                            resolve();  
+                        });
+                        this.socket.on("error", err => {
+                            console.log("Client connection failed!");
+                            if(!resolved)
+                                reject();
+                        })
                     }, err => reject(err));
                 } else {
                     reject();

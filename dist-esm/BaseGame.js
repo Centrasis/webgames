@@ -76,6 +76,7 @@ var SVEGame = /** @class */ (function () {
     };
     SVEGame.prototype.setupPeerConnection = function (peerID) {
         var _this = this;
+        console.log("Setup client connection..");
         return new Promise(function (resolve, reject) {
             _this.conOpts.metadata = {
                 client: _this.localUser.getName(),
@@ -146,19 +147,28 @@ var SVEGame = /** @class */ (function () {
                         _this.socket = new Peer(_this.peerOpts);
                         _this.bIsHost = false;
                         _this.localUser = localPlayer;
-                        _this.setupPeerConnection(_this.hostPeerID).then(function (c) {
-                            _this.connections = [c];
-                            _this.OnConnected(true);
-                            _this.sendGameRequest({
-                                action: "join",
-                                target: {
-                                    type: TargetType.Game,
-                                    id: ""
-                                },
-                                invoker: _this.localUser.getName()
-                            });
-                        }, function (err) { return _this.OnConnected(false); });
-                        resolve();
+                        var resolved = false;
+                        _this.socket.on("open", function (id) {
+                            resolved = true;
+                            _this.setupPeerConnection(_this.hostPeerID).then(function (c) {
+                                _this.connections = [c];
+                                _this.OnConnected(true);
+                                _this.sendGameRequest({
+                                    action: "join",
+                                    target: {
+                                        type: TargetType.Game,
+                                        id: ""
+                                    },
+                                    invoker: _this.localUser.getName()
+                                });
+                            }, function (err) { return _this.OnConnected(false); });
+                            resolve();
+                        });
+                        _this.socket.on("error", function (err) {
+                            console.log("Client connection failed!");
+                            if (!resolved)
+                                reject();
+                        });
                     }, function (err) { return reject(err); });
                 }
                 else {
