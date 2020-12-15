@@ -48,6 +48,7 @@ export default abstract class BaseGame extends SVEGame {
     abstract MinPlayers(): number;
     abstract GetPlayersCount(): number;
     OnNewPlayer: () => void;
+    onJoined(player: SVEAccount): void;
     MaxPlayers(): number;
 }
 //# sourceMappingURL=BaseGame.d.ts.map

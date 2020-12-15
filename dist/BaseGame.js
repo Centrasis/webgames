@@ -379,8 +379,14 @@ exports.SVEGame = SVEGame;
 var BaseGame = /** @class */ (function (_super) {
     __extends(BaseGame, _super);
     function BaseGame() {
-        return _super !== null && _super.apply(this, arguments) || this;
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this.OnNewPlayer = function () { };
+        return _this;
     }
+    BaseGame.prototype.onJoined = function (player) {
+        _super.prototype.onJoined.call(this, player);
+        this.OnNewPlayer();
+    };
     BaseGame.prototype.MaxPlayers = function () {
         return this.maxPlayers;
     };

@@ -394,7 +394,11 @@ export default abstract class BaseGame extends SVEGame {
 //    public abstract AddPlayer(user: SVEAccount, isLocal: Boolean): void;
     public abstract MinPlayers(): number;
     public abstract GetPlayersCount(): number;
-    public OnNewPlayer: () => void;
+    public OnNewPlayer: () => void = () => {};
+    public onJoined(player: SVEAccount) {
+        super.onJoined(player);
+        this.OnNewPlayer();
+    }
 
     public MaxPlayers(): number {
         return this.maxPlayers;
