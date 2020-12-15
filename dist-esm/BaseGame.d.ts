@@ -19,14 +19,14 @@ export declare class SVEGame {
     gameState: GameState;
     protected peerOpts: Peer.PeerJSOption;
     constructor(info: GameInfo);
-    OnGameRejected(reason: GameRejectReason): void;
+    OnGameRejected: (reason: GameRejectReason) => void;
     IsHostInstance(): boolean;
     IsRunning(): boolean;
     protected setupHostPeerConnection(): Promise<void>;
     protected setupPeerConnection(peerID: string): Promise<Peer.DataConnection>;
-    join(localPlayer: SVEAccount): void;
+    join(localPlayer: SVEAccount): Promise<void>;
     onJoined(player: SVEAccount): void;
-    OnConnected(success: Boolean): void;
+    OnConnected: (success: Boolean) => void;
     onEnd(): void;
     onStart(): void;
     EndGame(): void;
@@ -36,7 +36,7 @@ export declare class SVEGame {
     NotifyPlayer(player: SVEAccount, notification: String): void;
     protected OnGameStateChange(gs: GameState): void;
     onRequest(req: GameRequest): void;
-    create(): Promise<void>;
+    create(localPlayer: SVEAccount): Promise<void>;
     static getGames(): Promise<GameInfo[]>;
     leave(player: SVEAccount): void;
     getAsInitializer(): GameInfo;

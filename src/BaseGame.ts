@@ -34,9 +34,7 @@ export class SVEGame {
         this.gameState = info.gameState;
     }
 
-    public OnGameRejected(reason: GameRejectReason): void {
-
-    }
+    public OnGameRejected: (reason: GameRejectReason) => void = (r) => {};
 
     public IsHostInstance(): boolean {
         return this.bIsHost;
@@ -114,39 +112,45 @@ export class SVEGame {
         });
     }
 
-    public join(localPlayer: SVEAccount) {
-        console.log("Try join game: " + this.name);
-        fetch(SVESystemInfo.getGameRoot() + '/join/' + this.name, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json' 
-            }
-        }).then(response => {
-            if(response.status < 400) {
-                response.json().then(res => {
-                    if ("success" in res && res.success === false) {
-                        return;
-                    } else {
-                        this.hostPeerID = (res as GameInfo).peerID!;
-                        this.socket = new Peer(this.peerOpts);
-                        this.bIsHost = false;
-                        this.setupPeerConnection(this.hostPeerID).then((c) => {
-                            this.connections = [c];
-                            this.localUser = localPlayer;
-                            this.OnConnected(true);
-                            this.sendGameRequest({
-                                action: "join",
-                                target: {
-                                    type: TargetType.Game,
-                                    id: ""
-                                },
-                                invoker: this.localUser.getName()
-                            });
-                        }, err => this.OnConnected(false));
-                    }
-                });
-            }
+    public join(localPlayer: SVEAccount): Promise<void> {
+        return new Promise<void>((resolve, reject) => {
+            console.log("Try join game: " + this.name);
+            fetch(SVESystemInfo.getGameRoot() + '/join/' + this.name, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json' 
+                }
+            }).then(response => {
+                if(response.status < 400) {
+                    response.json().then(res => {
+                        if ("success" in res && res.success === false) {
+                            reject();
+                            return;
+                        } else {
+                            this.hostPeerID = (res as GameInfo).peerID!;
+                            this.socket = new Peer(this.peerOpts);
+                            this.bIsHost = false;
+                            this.setupPeerConnection(this.hostPeerID).then((c) => {
+                                this.connections = [c];
+                                this.localUser = localPlayer;
+                                this.OnConnected(true);
+                                this.sendGameRequest({
+                                    action: "join",
+                                    target: {
+                                        type: TargetType.Game,
+                                        id: ""
+                                    },
+                                    invoker: this.localUser.getName()
+                                });
+                            }, err => this.OnConnected(false));
+                            resolve();
+                        }
+                    }, err => reject(err));
+                } else {
+                    reject();
+                }
+            }, err => reject(err));
         });
     }
 
@@ -154,9 +158,7 @@ export class SVEGame {
         this.playerList.push(player);
     }
 
-    public OnConnected(success: Boolean): void {
-
-    }
+    public OnConnected: (success: Boolean) => void = (s) => {};
 
     public onEnd(): void {
         this.bIsRunning = false;
@@ -313,11 +315,12 @@ export class SVEGame {
         }
     }
 
-    public create(): Promise<void> {
+    public create(localPlayer: SVEAccount): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             this.socket = new Peer(this.peerOpts);
             this.hostPeerID = this.socket.id;
             this.bIsHost = true;
+            this.localUser = localPlayer;
             this.setupHostPeerConnection().then(() => {
                 fetch(SVESystemInfo.getGameRoot() + '/new', {
                     method: 'PUT',
@@ -328,8 +331,11 @@ export class SVEGame {
                     body: JSON.stringify(this.getAsInitializer())
                 }).then(response => {
                     if(response.status < 400) {
+                        this.OnConnected(true);
+                        this.onJoined(this.localUser!);
                         resolve();
                     } else {
+                        this.OnConnected(false);
                         reject();
                     }
                 });

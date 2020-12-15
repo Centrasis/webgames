@@ -33,6 +33,8 @@ var SVEGame = /** @class */ (function () {
             path: "/peer",
             secure: true
         };
+        this.OnGameRejected = function (r) { };
+        this.OnConnected = function (s) { };
         this.host = info.host;
         this.hostPeerID = (info.peerID !== undefined) ? info.peerID : "";
         this.name = info.name;
@@ -40,8 +42,6 @@ var SVEGame = /** @class */ (function () {
         this.maxPlayers = info.maxPlayers;
         this.gameState = info.gameState;
     }
-    SVEGame.prototype.OnGameRejected = function (reason) {
-    };
     SVEGame.prototype.IsHostInstance = function () {
         return this.bIsHost;
     };
@@ -111,45 +111,50 @@ var SVEGame = /** @class */ (function () {
     };
     SVEGame.prototype.join = function (localPlayer) {
         var _this = this;
-        console.log("Try join game: " + this.name);
-        fetch(svebaselib_1.SVESystemInfo.getGameRoot() + '/join/' + this.name, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        }).then(function (response) {
-            if (response.status < 400) {
-                response.json().then(function (res) {
-                    if ("success" in res && res.success === false) {
-                        return;
-                    }
-                    else {
-                        _this.hostPeerID = res.peerID;
-                        _this.socket = new peerjs_1.default(_this.peerOpts);
-                        _this.bIsHost = false;
-                        _this.setupPeerConnection(_this.hostPeerID).then(function (c) {
-                            _this.connections = [c];
-                            _this.localUser = localPlayer;
-                            _this.OnConnected(true);
-                            _this.sendGameRequest({
-                                action: "join",
-                                target: {
-                                    type: svebaselib_1.TargetType.Game,
-                                    id: ""
-                                },
-                                invoker: _this.localUser.getName()
-                            });
-                        }, function (err) { return _this.OnConnected(false); });
-                    }
-                });
-            }
+        return new Promise(function (resolve, reject) {
+            console.log("Try join game: " + _this.name);
+            fetch(svebaselib_1.SVESystemInfo.getGameRoot() + '/join/' + _this.name, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            }).then(function (response) {
+                if (response.status < 400) {
+                    response.json().then(function (res) {
+                        if ("success" in res && res.success === false) {
+                            reject();
+                            return;
+                        }
+                        else {
+                            _this.hostPeerID = res.peerID;
+                            _this.socket = new peerjs_1.default(_this.peerOpts);
+                            _this.bIsHost = false;
+                            _this.setupPeerConnection(_this.hostPeerID).then(function (c) {
+                                _this.connections = [c];
+                                _this.localUser = localPlayer;
+                                _this.OnConnected(true);
+                                _this.sendGameRequest({
+                                    action: "join",
+                                    target: {
+                                        type: svebaselib_1.TargetType.Game,
+                                        id: ""
+                                    },
+                                    invoker: _this.localUser.getName()
+                                });
+                            }, function (err) { return _this.OnConnected(false); });
+                            resolve();
+                        }
+                    }, function (err) { return reject(err); });
+                }
+                else {
+                    reject();
+                }
+            }, function (err) { return reject(err); });
         });
     };
     SVEGame.prototype.onJoined = function (player) {
         this.playerList.push(player);
-    };
-    SVEGame.prototype.OnConnected = function (success) {
     };
     SVEGame.prototype.onEnd = function () {
         this.bIsRunning = false;
@@ -298,12 +303,13 @@ var SVEGame = /** @class */ (function () {
             }
         }
     };
-    SVEGame.prototype.create = function () {
+    SVEGame.prototype.create = function (localPlayer) {
         var _this = this;
         return new Promise(function (resolve, reject) {
             _this.socket = new peerjs_1.default(_this.peerOpts);
             _this.hostPeerID = _this.socket.id;
             _this.bIsHost = true;
+            _this.localUser = localPlayer;
             _this.setupHostPeerConnection().then(function () {
                 fetch(svebaselib_1.SVESystemInfo.getGameRoot() + '/new', {
                     method: 'PUT',
@@ -314,9 +320,12 @@ var SVEGame = /** @class */ (function () {
                     body: JSON.stringify(_this.getAsInitializer())
                 }).then(function (response) {
                     if (response.status < 400) {
+                        _this.OnConnected(true);
+                        _this.onJoined(_this.localUser);
                         resolve();
                     }
                     else {
+                        _this.OnConnected(false);
                         reject();
                     }
                 });
