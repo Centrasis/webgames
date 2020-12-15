@@ -289,6 +289,16 @@ export class SVEGame {
                             },
                             invoker: this.localUser!.getName()
                         });
+                        this.playerList.forEach(p => {
+                            this.sendGameRequest({
+                                action: "join:OK",
+                                target: {
+                                    id: p.getName(),
+                                    type: TargetType.Player
+                                },
+                                invoker: this.localUser!.getName()
+                            });
+                        });
                     } else {
                         this.sendGameRequest({
                             action: "join:REJECT",
@@ -304,13 +314,15 @@ export class SVEGame {
             if (req.action === "join:OK" && req.target !== undefined) {
                 this.host = req.invoker;
                 if (req.target.type === TargetType.Player) {
-                    if (req.target.id === this.localUser!.getName()) {
-                        this.onJoined(this.localUser!);
-                        this.OnGameStateChange(this.gameState);
-                    } else {
-                        new SVEAccount({name: req.target.id, id: -1, sessionID: "", loginState: LoginState.NotLoggedIn}, (usr) => {
-                            this.onJoined(usr);
-                        });
+                    if (this.playerList.findIndex((p) => p.getName() == req.target.id) < 0) {
+                        if (req.target.id === this.localUser!.getName()) {
+                            this.onJoined(this.localUser!);
+                            this.OnGameStateChange(this.gameState);
+                        } else {
+                            new SVEAccount({name: req.target.id, id: -1, sessionID: "", loginState: LoginState.NotLoggedIn}, (usr) => {
+                                this.onJoined(usr);
+                            });
+                        }
                     }
                 }
             }
