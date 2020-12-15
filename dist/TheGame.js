@@ -267,6 +267,9 @@ var TheGame = /** @class */ (function (_super) {
             this.SetInitialCardCount(cardsCount);
         }
         _super.prototype.StartGame.call(this);
+    };
+    TheGame.prototype.onStart = function () {
+        _super.prototype.onStart.call(this);
         this.GUI.ShowNextRoundBtn();
         this.GUI.SetEnabledNextRoundBtn(false);
         if (this.players.length == 1) {

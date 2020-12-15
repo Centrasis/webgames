@@ -274,7 +274,10 @@ class TheGame extends CardGame {
         }
 
         super.StartGame();
+    }
 
+    public onStart() {
+        super.onStart();
         this.GUI.ShowNextRoundBtn();
         this.GUI.SetEnabledNextRoundBtn(false);
 

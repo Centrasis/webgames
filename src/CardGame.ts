@@ -1030,6 +1030,14 @@ export abstract class CardGame extends BaseGame {
                 return;
             }
 
+            if(req.action.field === "maxCardCount") {
+                if (req.target.id === this.localPlayer.getName()) {
+                    this.localPlayer.SetMaxCardCount(Number(req.action.value));
+                } else {
+                    this.players.find((p) => p.getName() === req.target.id).SetMaxCardCount(Number(req.action.value));
+                }
+            }
+
             if (req.action.field === "!notify") {
                 this.onNotify(req.action.value as string, this.players.find(p => p.getName() == req.invoker), this.players.find(p => p.getName() == req.target.id));
                 return;

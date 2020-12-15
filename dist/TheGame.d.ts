@@ -31,6 +31,7 @@ declare class TheGame extends CardGame {
     CheckGameState(): GameState;
     StartLocalPlayersRound(): void;
     StartGame(): void;
+    onStart(): void;
     ShowVotePlayerStartGUI(): void;
     CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     protected OnEndLocalRound(): void;

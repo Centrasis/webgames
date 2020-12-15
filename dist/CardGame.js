@@ -867,6 +867,14 @@ var CardGame = /** @class */ (function (_super) {
                 }
                 return;
             }
+            if (req.action.field === "maxCardCount") {
+                if (req.target.id === this.localPlayer.getName()) {
+                    this.localPlayer.SetMaxCardCount(Number(req.action.value));
+                }
+                else {
+                    this.players.find(function (p) { return p.getName() === req.target.id; }).SetMaxCardCount(Number(req.action.value));
+                }
+            }
             if (req.action.field === "!notify") {
                 this.onNotify(req.action.value, this.players.find(function (p) { return p.getName() == req.invoker; }), this.players.find(function (p) { return p.getName() == req.target.id; }));
                 return;
