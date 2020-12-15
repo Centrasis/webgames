@@ -560,20 +560,6 @@ export class Player extends SVEAccount {
 
     public SetGameState(gs: GameState): void {
         this.gameState = gs;
-
-        if (gs != GameState.Undetermined) {
-            this.Game.sendGameRequest({
-                action: {
-                    field: "gameState",
-                    value: gs
-                },
-                invoker: this.getName(),
-                target: {
-                    type: TargetType.Game,
-                    id: ""
-                }
-            });
-        }
     }
 
     public GetGameState(): GameState {
@@ -960,7 +946,7 @@ export abstract class CardGame extends BaseGame {
 
     public onJoined(user: SVEAccount): void {
         super.onJoined(user);
-        
+
         let isLocal = user.getName() === this.localUser.getName();
         if (isLocal) {
             console.log("On add new local player: " + user.getName());

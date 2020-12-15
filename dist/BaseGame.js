@@ -126,13 +126,6 @@ var SVEGame = /** @class */ (function () {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(this.getAsInitializer())
-        }).then(function (response) {
-            if (response.status < 400) {
-                console.log("Update server: OK");
-            }
-            else {
-                console.log("Update server: FAILED");
-            }
         });
     };
     SVEGame.prototype.join = function (localPlayer) {
@@ -149,6 +142,9 @@ var SVEGame = /** @class */ (function () {
                 if (response.status < 400) {
                     response.json().then(function (res) {
                         _this.hostPeerID = res.peerID;
+                        _this.host = res.host;
+                        _this.maxPlayers = res.maxPlayers;
+                        _this.gameState = res.gameState;
                         console.log("Try connect with host: " + _this.hostPeerID);
                         _this.socket = new peerjs_1.default(_this.peerOpts);
                         _this.bIsHost = false;
@@ -266,7 +262,7 @@ var SVEGame = /** @class */ (function () {
                 this.onEnd();
                 return;
             }
-            if (req.action === "join" && req.target !== undefined) {
+            if (req.action === "join" && req.target !== undefined && this.IsHostInstance()) {
                 if (req.target.type === svebaselib_1.TargetType.Game) {
                     if (this.connections.length <= this.maxPlayers) {
                         this.sendGameRequest({
@@ -295,6 +291,7 @@ var SVEGame = /** @class */ (function () {
                 if (req.target.type === svebaselib_1.TargetType.Player) {
                     if (req.target.id === this.localUser.getName()) {
                         this.onJoined(this.localUser);
+                        this.OnGameStateChange(this.gameState);
                     }
                     else {
                         new svebaselib_1.SVEAccount({ name: req.target.id, id: -1, sessionID: "", loginState: svebaselib_1.LoginState.NotLoggedIn }, function (usr) {

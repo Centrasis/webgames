@@ -483,19 +483,6 @@ var Player = /** @class */ (function (_super) {
     };
     Player.prototype.SetGameState = function (gs) {
         this.gameState = gs;
-        if (gs != svebaselib_1.GameState.Undetermined) {
-            this.Game.sendGameRequest({
-                action: {
-                    field: "gameState",
-                    value: gs
-                },
-                invoker: this.getName(),
-                target: {
-                    type: svebaselib_1.TargetType.Game,
-                    id: ""
-                }
-            });
-        }
     };
     Player.prototype.GetGameState = function () {
         return this.gameState;

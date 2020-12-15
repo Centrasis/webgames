@@ -129,12 +129,6 @@ export class SVEGame {
                 'Content-Type': 'application/json' 
             },
             body: JSON.stringify(this.getAsInitializer())
-        }).then(response => {
-            if(response.status < 400) {
-                console.log("Update server: OK");
-            } else {
-                console.log("Update server: FAILED");
-            }
         });
     }
 
@@ -151,6 +145,9 @@ export class SVEGame {
                 if(response.status < 400) {
                     response.json().then(res => {
                         this.hostPeerID = (res as GameInfo).peerID!;
+                        this.host = (res as GameInfo).host;
+                        this.maxPlayers = (res as GameInfo).maxPlayers;
+                        this.gameState = (res as GameInfo).gameState;
                         console.log("Try connect with host: " + this.hostPeerID);
                         this.socket = new Peer(this.peerOpts);
                         this.bIsHost = false;
@@ -281,7 +278,7 @@ export class SVEGame {
                 this.onEnd();
                 return;
             }
-            if (req.action === "join" && req.target !== undefined) {
+            if (req.action === "join" && req.target !== undefined && this.IsHostInstance()) {
                 if (req.target.type === TargetType.Game) {
                     if (this.connections.length <= this.maxPlayers) {
                         this.sendGameRequest({
@@ -309,6 +306,7 @@ export class SVEGame {
                 if (req.target.type === TargetType.Player) {
                     if (req.target.id === this.localUser!.getName()) {
                         this.onJoined(this.localUser!);
+                        this.OnGameStateChange(this.gameState);
                     } else {
                         new SVEAccount({name: req.target.id, id: -1, sessionID: "", loginState: LoginState.NotLoggedIn}, (usr) => {
                             this.onJoined(usr);
