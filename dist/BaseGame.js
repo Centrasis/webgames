@@ -203,7 +203,6 @@ var SVEGame = /** @class */ (function () {
                     id: ""
                 }
             });
-            this.onStart();
         }
     };
     SVEGame.prototype.GiveUp = function () {
@@ -246,6 +245,7 @@ var SVEGame = /** @class */ (function () {
     };
     SVEGame.prototype.onRequest = function (req) {
         var _this = this;
+        console.log("Request was: " + JSON.stringify(req));
         if (typeof req.action === "string") {
             if (req.action === "!startGame") {
                 this.bIsRunning = true;

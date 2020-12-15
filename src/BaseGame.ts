@@ -212,7 +212,6 @@ export class SVEGame {
                     id: ""
                 }
             });
-            this.onStart();
         }
     }
 
@@ -261,6 +260,7 @@ export class SVEGame {
     }
 
     public onRequest(req: GameRequest) {
+        console.log("Request was: " + JSON.stringify(req));
         if (typeof req.action === "string") {
             if (req.action === "!startGame") {
                 this.bIsRunning = true;
