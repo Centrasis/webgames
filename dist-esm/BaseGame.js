@@ -130,6 +130,7 @@ var SVEGame = /** @class */ (function () {
                         }
                         else {
                             _this.hostPeerID = res.peerID;
+                            console.log("Try connect with host: " + _this.hostPeerID);
                             _this.socket = new Peer(_this.peerOpts);
                             _this.bIsHost = false;
                             _this.localUser = localPlayer;
@@ -330,7 +331,7 @@ var SVEGame = /** @class */ (function () {
                         _this.OnConnected(false);
                         reject();
                     }
-                });
+                }, function (err) { return reject(err); });
             });
         });
     };
