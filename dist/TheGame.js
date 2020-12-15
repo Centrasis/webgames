@@ -338,7 +338,6 @@ var TheGame = /** @class */ (function (_super) {
     };
     TheGame.prototype.onRequest = function (req) {
         _super.prototype.onRequest.call(this, req);
-        this.SetGameState(this.CheckGameState());
         if (typeof req.action !== "string") {
             if ("!vote" == req.action.field) {
                 if (this.IsHostInstance()) {
@@ -478,6 +477,7 @@ var TheGame = /** @class */ (function (_super) {
         if (this.localPlayer.GetMaxCardCount() - this.localPlayer.GetCardsCount() >= 2) {
             this.GUI.SetEnabledNextRoundBtn(true);
         }
+        this.SetGameState(this.CheckGameState());
     };
     TheGame.prototype.MinPlayers = function () {
         return 1;

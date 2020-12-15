@@ -910,9 +910,8 @@ export abstract class CardGame extends BaseGame {
 
     public InvokeNextPlayerRound() {
         console.log("Invoke next round");
+        this.SetGameState(this.CheckGameState());
         if (this.IsHostInstance()) {
-            this.SetGameState(this.CheckGameState());
-
             this.playerIndexThatHasTurn += this.playDirection;
             if (this.playerIndexThatHasTurn < 0) {
                 this.playerIndexThatHasTurn = this.players.length - 1;

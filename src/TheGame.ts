@@ -369,7 +369,6 @@ class TheGame extends CardGame {
 
     public onRequest(req: GameRequest) {
         super.onRequest(req);
-        this.SetGameState(this.CheckGameState());
 
         if(typeof req.action !== "string") {
             if("!vote" == req.action.field) {
@@ -517,6 +516,8 @@ class TheGame extends CardGame {
         if(this.localPlayer.GetMaxCardCount() - this.localPlayer.GetCardsCount() >= 2) {
             this.GUI.SetEnabledNextRoundBtn(true);
         }
+
+        this.SetGameState(this.CheckGameState());
     }
 
     public MinPlayers(): number {
