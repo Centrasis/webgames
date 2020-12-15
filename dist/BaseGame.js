@@ -117,6 +117,23 @@ var SVEGame = /** @class */ (function () {
             });
         });
     };
+    SVEGame.prototype.updateInfos = function () {
+        fetch(svebaselib_1.SVESystemInfo.getGameRoot() + '/update/' + this.name, {
+            method: 'PUT',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(this.getAsInitializer())
+        }).then(function (response) {
+            if (response.status < 400) {
+                console.log("Update server: OK");
+            }
+            else {
+                console.log("Update server: FAILED");
+            }
+        });
+    };
     SVEGame.prototype.join = function (localPlayer) {
         var _this = this;
         return new Promise(function (resolve, reject) {
@@ -158,6 +175,7 @@ var SVEGame = /** @class */ (function () {
     };
     SVEGame.prototype.onJoined = function (player) {
         this.playerList.push(player);
+        this.updateInfos();
     };
     SVEGame.prototype.onEnd = function () {
         this.bIsRunning = false;
@@ -171,6 +189,7 @@ var SVEGame = /** @class */ (function () {
                 action: "!endGame",
                 invoker: this.localUser.getName()
             });
+            this.updateInfos();
             this.onEnd();
         }
     };
@@ -194,6 +213,7 @@ var SVEGame = /** @class */ (function () {
     SVEGame.prototype.SetGameState = function (gs) {
         if (this.IsHostInstance()) {
             this.gameState = gs;
+            this.updateInfos();
             this.sendGameRequest({
                 action: {
                     field: "gameState",
@@ -313,6 +333,7 @@ var SVEGame = /** @class */ (function () {
             _this.hostPeerID = _this.socket.id;
             _this.bIsHost = true;
             _this.localUser = localPlayer;
+            _this.playerList = [];
             _this.setupHostPeerConnection().then(function () {
                 fetch(svebaselib_1.SVESystemInfo.getGameRoot() + '/new', {
                     method: 'PUT',
@@ -361,11 +382,13 @@ var SVEGame = /** @class */ (function () {
     };
     SVEGame.prototype.leave = function (player) {
         this.playerList = this.playerList.filter(function (v) { return v.getName() === player.getName(); });
+        this.updateInfos();
     };
     SVEGame.prototype.getAsInitializer = function () {
         return {
             gameType: this.gameType,
             host: this.host,
+            playersCount: this.playerList.length,
             maxPlayers: this.maxPlayers,
             name: this.name,
             gameState: this.gameState,

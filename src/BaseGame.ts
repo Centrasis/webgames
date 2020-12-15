@@ -120,6 +120,23 @@ export class SVEGame {
         });
     }
 
+    public updateInfos() {
+        fetch(SVESystemInfo.getGameRoot() + '/update/' + this.name, {
+            method: 'PUT',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify(this.getAsInitializer())
+        }).then(response => {
+            if(response.status < 400) {
+                console.log("Update server: OK");
+            } else {
+                console.log("Update server: FAILED");
+            }
+        });
+    }
+
     public join(localPlayer: SVEAccount): Promise<void> {
         return new Promise<void>((resolve, reject) => {
             console.log("Try join game: " + this.name);
@@ -160,6 +177,7 @@ export class SVEGame {
 
     public onJoined(player: SVEAccount) {
         this.playerList.push(player);
+        this.updateInfos();
     }
 
     public OnConnected: (success: Boolean) => void = (s) => {};
@@ -178,6 +196,7 @@ export class SVEGame {
                 action: "!endGame",
                 invoker: this.localUser!.getName()
             });
+            this.updateInfos();
 
             this.onEnd();
         }
@@ -206,6 +225,7 @@ export class SVEGame {
     public SetGameState(gs: GameState) {
         if(this.IsHostInstance()) {
             this.gameState = gs;
+            this.updateInfos();
             this.sendGameRequest({
                 action: {
                     field: "gameState",
@@ -325,6 +345,7 @@ export class SVEGame {
             this.hostPeerID = this.socket.id;
             this.bIsHost = true;
             this.localUser = localPlayer;
+            this.playerList = [];
             this.setupHostPeerConnection().then(() => {
                 fetch(SVESystemInfo.getGameRoot() + '/new', {
                     method: 'PUT',
@@ -373,12 +394,14 @@ export class SVEGame {
 
     public leave(player: SVEAccount) {
         this.playerList = this.playerList.filter((v) => v.getName() === player.getName());
+        this.updateInfos();
     }
 
     public getAsInitializer(): GameInfo {
         return {
             gameType: this.gameType,
             host: this.host,
+            playersCount: this.playerList.length,
             maxPlayers: this.maxPlayers,
             name: this.name,
             gameState: this.gameState,
