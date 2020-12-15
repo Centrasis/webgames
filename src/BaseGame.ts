@@ -341,30 +341,38 @@ export class SVEGame {
 
     public create(localPlayer: SVEAccount): Promise<void> {
         return new Promise<void>((resolve, reject) => {
-            this.socket = new Peer(this.peerOpts);
-            this.hostPeerID = this.socket.id;
-            console.log("Got Peer ID: " + this.hostPeerID);
             this.bIsHost = true;
             this.localUser = localPlayer;
             this.playerList = [];
-            this.setupHostPeerConnection().then(() => {
-                fetch(SVESystemInfo.getGameRoot() + '/new', {
-                    method: 'PUT',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json' 
-                    },
-                    body: JSON.stringify(this.getAsInitializer())
-                }).then(response => {
-                    if(response.status < 400) {
-                        this.OnConnected(true);
-                        this.onJoined(this.localUser!);
-                        resolve();
-                    } else {
-                        this.OnConnected(false);
-                        reject();
-                    }
-                }, err => reject(err));
+
+            this.socket = new Peer(this.peerOpts);
+            this.socket.on('open', (id) => {
+                this.hostPeerID = id;
+                console.log("Got Peer ID: " + this.hostPeerID);
+
+                this.setupHostPeerConnection().then(() => {
+                    fetch(SVESystemInfo.getGameRoot() + '/new', {
+                        method: 'PUT',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json' 
+                        },
+                        body: JSON.stringify(this.getAsInitializer())
+                    }).then(response => {
+                        if(response.status < 400) {
+                            this.OnConnected(true);
+                            this.onJoined(this.localUser!);
+                            resolve();
+                        } else {
+                            this.OnConnected(false);
+                            reject();
+                        }
+                    }, err => reject(err));
+                });
+            });
+            this.socket.on("error", (err) => {
+                console.log("Connection error (p2p)!");
+                reject();
             });
         });
     }
@@ -406,7 +414,7 @@ export class SVEGame {
             maxPlayers: this.maxPlayers,
             name: this.name,
             gameState: this.gameState,
-            peerID: (this.IsHostInstance()) ? this.socket.id : this.hostPeerID
+            peerID: this.hostPeerID
         }
     }
 

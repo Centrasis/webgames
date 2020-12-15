@@ -329,31 +329,37 @@ var SVEGame = /** @class */ (function () {
     SVEGame.prototype.create = function (localPlayer) {
         var _this = this;
         return new Promise(function (resolve, reject) {
-            _this.socket = new peerjs_1.default(_this.peerOpts);
-            _this.hostPeerID = _this.socket.id;
-            console.log("Got Peer ID: " + _this.hostPeerID);
             _this.bIsHost = true;
             _this.localUser = localPlayer;
             _this.playerList = [];
-            _this.setupHostPeerConnection().then(function () {
-                fetch(svebaselib_1.SVESystemInfo.getGameRoot() + '/new', {
-                    method: 'PUT',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(_this.getAsInitializer())
-                }).then(function (response) {
-                    if (response.status < 400) {
-                        _this.OnConnected(true);
-                        _this.onJoined(_this.localUser);
-                        resolve();
-                    }
-                    else {
-                        _this.OnConnected(false);
-                        reject();
-                    }
-                }, function (err) { return reject(err); });
+            _this.socket = new peerjs_1.default(_this.peerOpts);
+            _this.socket.on('open', function (id) {
+                _this.hostPeerID = id;
+                console.log("Got Peer ID: " + _this.hostPeerID);
+                _this.setupHostPeerConnection().then(function () {
+                    fetch(svebaselib_1.SVESystemInfo.getGameRoot() + '/new', {
+                        method: 'PUT',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(_this.getAsInitializer())
+                    }).then(function (response) {
+                        if (response.status < 400) {
+                            _this.OnConnected(true);
+                            _this.onJoined(_this.localUser);
+                            resolve();
+                        }
+                        else {
+                            _this.OnConnected(false);
+                            reject();
+                        }
+                    }, function (err) { return reject(err); });
+                });
+            });
+            _this.socket.on("error", function (err) {
+                console.log("Connection error (p2p)!");
+                reject();
             });
         });
     };
@@ -393,7 +399,7 @@ var SVEGame = /** @class */ (function () {
             maxPlayers: this.maxPlayers,
             name: this.name,
             gameState: this.gameState,
-            peerID: (this.IsHostInstance()) ? this.socket.id : this.hostPeerID
+            peerID: this.hostPeerID
         };
     };
     SVEGame.prototype.sendGameRequest = function (req) {
