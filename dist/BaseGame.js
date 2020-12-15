@@ -33,6 +33,10 @@ var SVEGame = /** @class */ (function () {
             path: "/peer",
             secure: true
         };
+        this.conOpts = {
+            serialization: "json",
+            reliable: false
+        };
         this.OnGameRejected = function (r) { };
         this.OnConnected = function (s) { };
         this.host = info.host;
@@ -53,7 +57,13 @@ var SVEGame = /** @class */ (function () {
         return new Promise(function (resolve, reject) {
             _this.socket.on("connection", function (c) {
                 c.on('open', function () {
-                    console.log("New player connection");
+                    console.log("New player connection: " + JSON.stringify(c.metadata));
+                    if (_this.connections.length < _this.maxPlayers - 1) {
+                        _this.connections.push(c);
+                    }
+                    else {
+                        c.close();
+                    }
                 });
                 c.on('close', function () {
                     console.log("A player connection was closed");
@@ -66,12 +76,6 @@ var SVEGame = /** @class */ (function () {
                 c.on('error', function (err) {
                     console.log("An peer error occured: " + JSON.stringify(err));
                 });
-                if (_this.connections.length < _this.maxPlayers - 1) {
-                    _this.connections.push(c);
-                }
-                else {
-                    c.close();
-                }
             });
             resolve();
         });
@@ -79,7 +83,11 @@ var SVEGame = /** @class */ (function () {
     SVEGame.prototype.setupPeerConnection = function (peerID) {
         var _this = this;
         return new Promise(function (resolve, reject) {
-            var conn = _this.socket.connect(peerID);
+            _this.conOpts.metadata = {
+                client: _this.localUser.getName(),
+                host: _this.host
+            };
+            var conn = _this.socket.connect(peerID, _this.conOpts);
             var returned = false;
             conn.on('open', function () {
                 console.log("Connected with game: " + _this.name);
@@ -130,9 +138,9 @@ var SVEGame = /** @class */ (function () {
                             _this.hostPeerID = res.peerID;
                             _this.socket = new peerjs_1.default(_this.peerOpts);
                             _this.bIsHost = false;
+                            _this.localUser = localPlayer;
                             _this.setupPeerConnection(_this.hostPeerID).then(function (c) {
                                 _this.connections = [c];
-                                _this.localUser = localPlayer;
                                 _this.OnConnected(true);
                                 _this.sendGameRequest({
                                     action: "join",

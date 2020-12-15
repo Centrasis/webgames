@@ -24,6 +24,11 @@ export class SVEGame {
         path: "/peer",
         secure: true
     }
+    protected conOpts: Peer.PeerConnectOption = {
+        serialization: "json",
+        reliable: false
+    }
+
 
     constructor(info: GameInfo) {
         this.host = info.host;
@@ -48,7 +53,12 @@ export class SVEGame {
         return new Promise<void>((resolve, reject) => {
             this.socket!.on("connection", (c) => {
                 c.on('open', () => {
-                    console.log("New player connection");
+                    console.log("New player connection: " + JSON.stringify(c.metadata));
+                    if (this.connections.length < this.maxPlayers - 1) {
+                        this.connections.push(c);
+                    } else {
+                        c.close();
+                    }
                 });
 
                 c.on('close', () => {
@@ -64,12 +74,6 @@ export class SVEGame {
                 c.on('error', (err) => {
                     console.log("An peer error occured: " + JSON.stringify(err));
                 });
-
-                if (this.connections.length < this.maxPlayers - 1) {
-                    this.connections.push(c);
-                } else {
-                    c.close();
-                }
             });
 
             resolve();
@@ -78,7 +82,11 @@ export class SVEGame {
 
     protected setupPeerConnection(peerID:string): Promise<Peer.DataConnection> {
         return new Promise<Peer.DataConnection>((resolve, reject) => {
-            const conn = this.socket!.connect(peerID);
+            this.conOpts.metadata = {
+                client: this.localUser!.getName(),
+                host: this.host
+            };
+            const conn = this.socket!.connect(peerID, this.conOpts);
             let returned = false;
             conn.on('open', () => {
                 console.log("Connected with game: " + this.name);
@@ -131,9 +139,9 @@ export class SVEGame {
                             this.hostPeerID = (res as GameInfo).peerID!;
                             this.socket = new Peer(this.peerOpts);
                             this.bIsHost = false;
+                            this.localUser = localPlayer;
                             this.setupPeerConnection(this.hostPeerID).then((c) => {
                                 this.connections = [c];
-                                this.localUser = localPlayer;
                                 this.OnConnected(true);
                                 this.sendGameRequest({
                                     action: "join",
