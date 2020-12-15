@@ -320,7 +320,7 @@ var TheGame = /** @class */ (function (_super) {
     TheGame.prototype.onRequest = function (req) {
         _super.prototype.onRequest.call(this, req);
         if (typeof req.action !== "string") {
-            if ("!vote" == req.action.field) {
+            if ("!vote" == req.action.field && req.action.value.voteType == "vote") {
                 if (this.IsHostInstance()) {
                     var result = req.action.value;
                     this.votesList.push(result.value);

@@ -374,7 +374,7 @@ class TheGame extends CardGame {
         super.onRequest(req);
 
         if(typeof req.action !== "string") {
-            if("!vote" == req.action.field) {
+            if("!vote" == req.action.field && (req.action.value.voteType as string) == "vote") {
                 if (this.IsHostInstance()) {
                     let result = req.action.value;
                     this.votesList.push(result.value);
