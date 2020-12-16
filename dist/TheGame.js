@@ -132,6 +132,7 @@ var TheGameGUI = /** @class */ (function (_super) {
     __extends(TheGameGUI, _super);
     function TheGameGUI(scene) {
         var _this = _super.call(this, scene) || this;
+        _this.AVotingUI = null;
         _this.OnNextRoundClick = function () { };
         _this.EndRoundBtn = GUI.Button.CreateSimpleButton("EndRoundBtn", "Runde Beenden");
         _this.EndRoundBtn.width = "150px";

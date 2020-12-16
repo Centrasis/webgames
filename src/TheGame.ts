@@ -115,7 +115,7 @@ class TheGameGUI extends BaseGameGUI {
     protected EndRoundBtn: GUI.Button;
     protected GameStateText: GUI.TextBlock;
     protected CardsLeftText: GUI.TextBlock;
-    public AVotingUI: VotingUI;
+    public AVotingUI: VotingUI = null;
     public GameID: String;
     public Game: SVEGame;
     public OnNextRoundClick: () => void;
