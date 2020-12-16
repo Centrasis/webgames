@@ -32,6 +32,7 @@ var SVEGame = /** @class */ (function () {
             reliable: false
         };
         this.OnGameRejected = function (r) { };
+        this.OnGameStart = function () { };
         this.OnConnected = function (s) { };
         this.host = info.host;
         this.hostPeerID = (info.peerID !== undefined) ? info.peerID : "";
@@ -182,6 +183,7 @@ var SVEGame = /** @class */ (function () {
     };
     SVEGame.prototype.onStart = function () {
         this.bIsRunning = true;
+        this.OnGameStart();
     };
     SVEGame.prototype.EndGame = function () {
         if (this.IsHostInstance()) {

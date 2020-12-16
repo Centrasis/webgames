@@ -168,7 +168,7 @@ var TheGameGUI = /** @class */ (function (_super) {
     TheGameGUI.prototype.ShowVotePlayerStart = function () {
         var _this = this;
         var self = this;
-        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), this.Game.GetPlayersCount(), function (val) {
+        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), this.Game, function (val) {
             self.AVotingUI.removeAll();
             self.AVotingUI.onGameStartVoteResult = _this.Game.setPlayerToStart;
             self.AVotingUI.postVote("vote", "PlayerStart", val, _this.Game.GetLocalPlayer());

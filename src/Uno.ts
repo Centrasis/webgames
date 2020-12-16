@@ -429,7 +429,7 @@ class UNOGUI extends BaseGameGUI {
 
     public ShowColorWish(ug: UNO): void {
         var self = this;
-        this.AVotingUI = new VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], (self.Game as CardGame).GetPlayersCount(), (val: String) => {
+        this.AVotingUI = new VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], self.Game, (val: String) => {
             self.AVotingUI.removeAll();
 
             self.AVotingUI.postVote("SelfOnly", "ColorWish", val, (self.Game as CardGame).GetLocalPlayer());

@@ -510,12 +510,13 @@ var PlayerListUI = /** @class */ (function () {
 }());
 export { PlayerListUI };
 var VotingUI = /** @class */ (function () {
-    function VotingUI(gui, caption, votes, playersCount, onVote) {
+    function VotingUI(gui, caption, votes, game, onVote) {
         var _this = this;
         this.votesList = [];
         this.playersCount = 0;
         this.onGameStartVoteResult = function (res) { };
         this.GUI = gui;
+        this.Game = game;
         this.votes = [];
         this.caption = new GUI.TextBlock("", caption);
         this.caption.fontSize = 30;
@@ -523,7 +524,7 @@ var VotingUI = /** @class */ (function () {
         this.caption.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         this.caption.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
         this.GUI.addControl(this.caption);
-        this.playersCount = playersCount;
+        this.playersCount = game.GetPlayersCount();
         var i = 0;
         votes.forEach(function (p) {
             var id = p;

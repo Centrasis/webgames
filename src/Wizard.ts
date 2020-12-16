@@ -558,7 +558,7 @@ class WizardGUI extends BaseGameGUI {
         for (let i = 0; i <= ug.roundCount; i++) {
             list.push(i.toString());
         }
-        this.AVotingUI = new VotingUI(this.GUI, "Wie viele Stiche wirst du bekommen?", list, ug.GetPlayersCount(), (val: String) => {
+        this.AVotingUI = new VotingUI(this.GUI, "Wie viele Stiche wirst du bekommen?", list, ug, (val: String) => {
             self.AVotingUI.removeAll();
 
             self.AVotingUI.postVote("SelfOnly", "PointsGuess_" + ug.GetLocalPlayerID(), val, ug.GetLocalPlayer());

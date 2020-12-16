@@ -40,6 +40,7 @@ export class SVEGame {
     }
 
     public OnGameRejected: (reason: GameRejectReason) => void = (r) => {};
+    public OnGameStart: () => void = () => {};
 
     public IsHostInstance(): boolean {
         return this.bIsHost;
@@ -195,6 +196,7 @@ export class SVEGame {
 
     public onStart(): void {
         this.bIsRunning = true;
+        this.OnGameStart();
     }
 
     public EndGame() {

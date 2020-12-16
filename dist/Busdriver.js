@@ -512,7 +512,7 @@ var BusdriverGUI = /** @class */ (function (_super) {
             bd.OnEndLocalRound();
             return;
         }
-        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, challenge.ChallengeText, challenge.Answers, bd.GetPlayersCount(), function (val) {
+        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, challenge.ChallengeText, challenge.Answers, bd, function (val) {
             self.AVotingUI.removeAll();
             self.AVotingUI.postVote("SelfOnly", challenge.name, val, bd.GetLocalPlayer());
             self.AVotingUI = null;

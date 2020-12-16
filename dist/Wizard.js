@@ -504,7 +504,7 @@ var WizardGUI = /** @class */ (function (_super) {
         for (var i = 0; i <= ug.roundCount; i++) {
             list.push(i.toString());
         }
-        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, "Wie viele Stiche wirst du bekommen?", list, ug.GetPlayersCount(), function (val) {
+        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, "Wie viele Stiche wirst du bekommen?", list, ug, function (val) {
             self.AVotingUI.removeAll();
             self.AVotingUI.postVote("SelfOnly", "PointsGuess_" + ug.GetLocalPlayerID(), val, ug.GetLocalPlayer());
             self.AVotingUI = null;

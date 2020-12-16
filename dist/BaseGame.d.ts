@@ -21,6 +21,7 @@ export declare class SVEGame {
     protected conOpts: Peer.PeerConnectOption;
     constructor(info: GameInfo);
     OnGameRejected: (reason: GameRejectReason) => void;
+    OnGameStart: () => void;
     IsHostInstance(): boolean;
     IsRunning(): boolean;
     protected setupHostPeerConnection(): Promise<void>;

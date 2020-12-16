@@ -628,14 +628,15 @@ export class PlayerListUI {
 export class VotingUI {
     protected GUI: GUI.AdvancedDynamicTexture;
     protected votes: GUI.Button[];
-    protected Game: BaseGame;
+    protected Game: SVEGame;
     protected caption: GUI.TextBlock;
     protected votesList: string[] = [];
     protected playersCount: number = 0;
     public onGameStartVoteResult: (res: string) => void = (res) => {};
 
-    constructor(gui: GUI.AdvancedDynamicTexture, caption: string, votes: string[], playersCount: number, onVote: (val: String) => void) {
+    constructor(gui: GUI.AdvancedDynamicTexture, caption: string, votes: string[], game: SVEGame, onVote: (val: String) => void) {
         this.GUI = gui;
+        this.Game = game;
         this.votes = [];
         this.caption = new GUI.TextBlock("", caption);
         this.caption.fontSize = 30;
@@ -643,7 +644,7 @@ export class VotingUI {
         this.caption.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         this.caption.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
         this.GUI.addControl(this.caption);
-        this.playersCount = playersCount;
+        this.playersCount = game.GetPlayersCount();
 
         let i = 0;
         votes.forEach((p) => {

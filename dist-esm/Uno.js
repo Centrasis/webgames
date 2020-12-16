@@ -376,7 +376,7 @@ var UNOGUI = /** @class */ (function (_super) {
     };
     UNOGUI.prototype.ShowColorWish = function (ug) {
         var self = this;
-        this.AVotingUI = new VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], self.Game.GetPlayersCount(), function (val) {
+        this.AVotingUI = new VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], self.Game, function (val) {
             self.AVotingUI.removeAll();
             self.AVotingUI.postVote("SelfOnly", "ColorWish", val, self.Game.GetLocalPlayer());
             self.AVotingUI = null;
