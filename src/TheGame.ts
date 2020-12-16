@@ -323,6 +323,7 @@ class TheGame extends CardGame {
 
             this.GUI.SetEnabledNextRoundBtn(false);
             this.localPlayer.drawCards((<TheGameCardDeck>this.Deck).GetDrawStack());
+            this.localPlayer.GetCards().forEach(c => c.reveal());
         } else {
             super.OnEndLocalRound();
         }

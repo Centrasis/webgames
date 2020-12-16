@@ -283,6 +283,7 @@ var TheGame = /** @class */ (function (_super) {
             _super.prototype.OnEndLocalRound.call(this);
             this.GUI.SetEnabledNextRoundBtn(false);
             this.localPlayer.drawCards(this.Deck.GetDrawStack());
+            this.localPlayer.GetCards().forEach(function (c) { return c.reveal(); });
         }
         else {
             _super.prototype.OnEndLocalRound.call(this);
