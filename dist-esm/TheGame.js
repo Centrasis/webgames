@@ -148,7 +148,7 @@ var TheGameGUI = /** @class */ (function (_super) {
         var self = this;
         this.AVotingUI = new VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), this.Game, function (val) {
             self.AVotingUI.removeAll();
-            self.AVotingUI.onGameStartVoteResult = _this.Game.setPlayerToStart;
+            VotingUI.onGameStartVoteResult = _this.Game.setPlayerToStart;
             self.AVotingUI.postVote("vote", "PlayerStart", val, _this.Game.GetLocalPlayer());
             self.AVotingUI = null;
         });
@@ -170,9 +170,7 @@ var TheGameGUI = /** @class */ (function (_super) {
         this.GUI.removeControl(this.EndRoundBtn);
     };
     TheGameGUI.prototype.onRequest = function (req) {
-        if (this.AVotingUI !== null) {
-            this.AVotingUI.onRequest(req);
-        }
+        VotingUI.onRequest(req);
     };
     return TheGameGUI;
 }(BaseGameGUI));

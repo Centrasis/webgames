@@ -166,7 +166,7 @@ class TheGameGUI extends BaseGameGUI {
         this.AVotingUI = new VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), this.Game, (val: String) => {
             self.AVotingUI.removeAll();
 
-            self.AVotingUI.onGameStartVoteResult = (this.Game as CardGame).setPlayerToStart;
+            VotingUI.onGameStartVoteResult = (this.Game as CardGame).setPlayerToStart;
 
             self.AVotingUI.postVote("vote", "PlayerStart", val, (this.Game as CardGame).GetLocalPlayer());
 
@@ -196,9 +196,7 @@ class TheGameGUI extends BaseGameGUI {
     }
 
     public onRequest(req: GameRequest) {
-        if(this.AVotingUI !== null) {
-            this.AVotingUI.onRequest(req);
-        }
+        VotingUI.onRequest(req);
     }
 }
 

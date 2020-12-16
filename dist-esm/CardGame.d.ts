@@ -137,15 +137,15 @@ export declare class PlayerListUI {
 export declare class VotingUI {
     protected GUI: GUI.AdvancedDynamicTexture;
     protected votes: GUI.Button[];
-    protected Game: SVEGame;
+    protected static Game: SVEGame;
     protected caption: GUI.TextBlock;
-    protected votesList: string[];
-    protected playersCount: number;
-    onGameStartVoteResult: (res: string) => void;
+    protected static votesList: string[];
+    protected static playersCount: number;
+    static onGameStartVoteResult: (res: string) => void;
     constructor(gui: GUI.AdvancedDynamicTexture, caption: string, votes: string[], game: SVEGame, onVote: (val: String) => void);
     removeAll(): void;
     postVote(voteType: "vote" | "SelfOnly", voteID: string, value: any, player: Player): void;
-    onRequest(req: GameRequest): void;
+    static onRequest(req: GameRequest): void;
 }
 export declare class BaseGameGUI {
     protected GUI: GUI.AdvancedDynamicTexture;

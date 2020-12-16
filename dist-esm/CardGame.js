@@ -512,11 +512,8 @@ export { PlayerListUI };
 var VotingUI = /** @class */ (function () {
     function VotingUI(gui, caption, votes, game, onVote) {
         var _this = this;
-        this.votesList = [];
-        this.playersCount = 0;
-        this.onGameStartVoteResult = function (res) { };
         this.GUI = gui;
-        this.Game = game;
+        VotingUI.Game = game;
         this.votes = [];
         this.caption = new GUI.TextBlock("", caption);
         this.caption.fontSize = 30;
@@ -524,7 +521,7 @@ var VotingUI = /** @class */ (function () {
         this.caption.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         this.caption.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
         this.GUI.addControl(this.caption);
-        this.playersCount = game.GetPlayersCount();
+        VotingUI.playersCount = game.GetPlayersCount();
         var i = 0;
         votes.forEach(function (p) {
             var id = p;
@@ -554,7 +551,7 @@ var VotingUI = /** @class */ (function () {
         this.GUI.removeControl(this.caption);
     };
     VotingUI.prototype.postVote = function (voteType, voteID, value, player) {
-        this.Game.sendGameRequest({
+        VotingUI.Game.sendGameRequest({
             action: {
                 field: "!vote",
                 value: {
@@ -566,7 +563,7 @@ var VotingUI = /** @class */ (function () {
             invoker: player.getName()
         });
     };
-    VotingUI.prototype.onRequest = function (req) {
+    VotingUI.onRequest = function (req) {
         if (typeof req.action !== "string") {
             if ("!vote" == req.action.field && req.action.value.voteType == "vote") {
                 var result = req.action.value;
@@ -588,12 +585,15 @@ var VotingUI = /** @class */ (function () {
                         _loop_1(i);
                     }
                     console.log("Got voting result for player start: " + res);
-                    this.onGameStartVoteResult(res);
+                    VotingUI.onGameStartVoteResult(res);
                 }
                 return;
             }
         }
     };
+    VotingUI.votesList = [];
+    VotingUI.playersCount = 0;
+    VotingUI.onGameStartVoteResult = function (res) { };
     return VotingUI;
 }());
 export { VotingUI };
