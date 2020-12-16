@@ -908,24 +908,19 @@ var CardGame = /** @class */ (function (_super) {
                 return;
             }
             if ("!setTurn" == req.action.field) {
-                if (req.action.value == this.localPlayer.getName()) {
+                var pName_1 = req.action.value;
+                if (pName_1 == this.localPlayer.getName()) {
                     this.StartLocalPlayersRound();
                 }
                 else {
                     this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
                 }
+                var p = this.players.find(function (e) { return e.getName() == pName_1; });
+                this.onPlayersRoundBegin(p);
             }
             if ("!playDirection" == req.action.field) {
                 this.playDirection = Number(req.action.value);
                 this.onGameDirectionChanged();
-            }
-            if ("!nextTurn" == req.action.field) {
-                var p = this.players.find(function (e) { return e.getName() == req.action.value; });
-                this.onPlayersRoundBegin(p);
-                if (this.localPlayer.getName() == req.action.value) {
-                    this.StartLocalPlayersRound();
-                }
-                return;
             }
             if (req.action.field === "maxCardCount") {
                 if (req.target.id === this.localPlayer.getName()) {

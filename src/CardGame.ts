@@ -1068,26 +1068,20 @@ export abstract class CardGame extends BaseGame {
             }
 
             if("!setTurn" == req.action.field) {
-                if ((req.action.value as string) == this.localPlayer.getName()) {
+                let pName = req.action.value as string;
+                if (pName == this.localPlayer.getName()) {
                     this.StartLocalPlayersRound();
                 } else {
                     this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
                 }
+                let p = this.players.find(e => e.getName() == pName);
+
+                this.onPlayersRoundBegin(p);
             }
 
             if("!playDirection" == req.action.field) {
                 this.playDirection = Number(req.action.value);
                 this.onGameDirectionChanged();
-            }
-
-            if("!nextTurn" == req.action.field) {
-                let p = this.players.find(e => e.getName() == (req.action as SetDataRequest).value as string);
-
-                this.onPlayersRoundBegin(p);
-                if (this.localPlayer.getName() == (req.action as SetDataRequest).value as string) {
-                    this.StartLocalPlayersRound();
-                }
-                return;
             }
 
             if(req.action.field === "maxCardCount") {
