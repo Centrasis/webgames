@@ -1014,8 +1014,8 @@ export abstract class CardGame extends BaseGame {
             this.localPlayer.Game = this;
         }
         this.players.push(player);
-
         player.Game = this;
+        player.SetPhase(PlayerGamePhase.Spectating);
 
         this.OnNewPlayer();
     }
@@ -1068,9 +1068,10 @@ export abstract class CardGame extends BaseGame {
             }
 
             if("!setTurn" == req.action.field) {
-                if ((req.action.value as string) == this.localPlayer.getName())
-                {
+                if ((req.action.value as string) == this.localPlayer.getName()) {
                     this.StartLocalPlayersRound();
+                } else {
+                    this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
                 }
             }
 

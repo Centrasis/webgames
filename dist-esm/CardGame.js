@@ -836,6 +836,7 @@ var CardGame = /** @class */ (function (_super) {
         }
         this.players.push(player);
         player.Game = this;
+        player.SetPhase(PlayerGamePhase.Spectating);
         this.OnNewPlayer();
     };
     CardGame.prototype.onPlayersRoundBegin = function (player) {
@@ -884,6 +885,9 @@ var CardGame = /** @class */ (function (_super) {
             if ("!setTurn" == req.action.field) {
                 if (req.action.value == this.localPlayer.getName()) {
                     this.StartLocalPlayersRound();
+                }
+                else {
+                    this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
                 }
             }
             if ("!playDirection" == req.action.field) {
