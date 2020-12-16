@@ -698,13 +698,13 @@ export class VotingUI {
             if("!vote" == req.action.field && (req.action.value.voteType as string) == "vote") {
                 let result = req.action.value;
                 console.log("Counting vote: " + JSON.stringify(result.value));
-                this.votesList.push(result.value);
+                VotingUI.votesList.push(result.value);
                 if (result.voteID == "PlayerStart" && this.votesList.length == this.playersCount) {
-                    let s = new Set(this.votesList);
+                    let s = Array.from(new Set(VotingUI.votesList));
                     let c = 0;
                     let res = s[0];
-                    for (let i = 0; i < s.size; i++) {
-                        let c1 = this.votesList.filter(v => v == s[i]).length;
+                    for (let i = 0; i < s.length; i++) {
+                        let c1 = VotingUI.votesList.filter(v => v == s[i]).length;
                         if (c1 > c) {
                             c = c1;
                             res = s[i];

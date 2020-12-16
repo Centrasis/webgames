@@ -568,20 +568,19 @@ var VotingUI = /** @class */ (function () {
             if ("!vote" == req.action.field && req.action.value.voteType == "vote") {
                 var result = req.action.value;
                 console.log("Counting vote: " + JSON.stringify(result.value));
-                this.votesList.push(result.value);
+                VotingUI.votesList.push(result.value);
                 if (result.voteID == "PlayerStart" && this.votesList.length == this.playersCount) {
-                    var s_1 = new Set(this.votesList);
+                    var s_1 = Array.from(new Set(VotingUI.votesList));
                     var c = 0;
                     var res = s_1[0];
                     var _loop_1 = function (i) {
-                        var c1 = this_1.votesList.filter(function (v) { return v == s_1[i]; }).length;
+                        var c1 = VotingUI.votesList.filter(function (v) { return v == s_1[i]; }).length;
                         if (c1 > c) {
                             c = c1;
                             res = s_1[i];
                         }
                     };
-                    var this_1 = this;
-                    for (var i = 0; i < s_1.size; i++) {
+                    for (var i = 0; i < s_1.length; i++) {
                         _loop_1(i);
                     }
                     console.log("Got voting result for player start: " + res);
