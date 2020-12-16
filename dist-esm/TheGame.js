@@ -243,6 +243,7 @@ var TheGame = /** @class */ (function (_super) {
             // initialize all players
             this.players.forEach(function (p) {
                 p.drawCards(_this.Deck.GetDrawStack());
+                p.GetCards().forEach(function (c) { return c.reveal(); });
             });
         }
         _super.prototype.StartGame.call(this);

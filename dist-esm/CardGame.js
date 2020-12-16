@@ -78,16 +78,20 @@ var Card = /** @class */ (function () {
         //this.upVector = BABYLON.Vector3.TransformCoordinates(this.upVector, m);
     };
     Card.prototype.reveal = function () {
-        this.mesh.lookAt(new BABYLON.Vector3(this.mesh.position.x, this.mesh.position.y - 2, this.mesh.position.z));
-        this.mesh.rotate(BABYLON.Axis.Y, -Math.PI / 2.0, BABYLON.Space.WORLD);
+        if (!this.bIsRevealed) {
+            this.mesh.lookAt(new BABYLON.Vector3(this.mesh.position.x, this.mesh.position.y - 2, this.mesh.position.z));
+            this.mesh.rotate(BABYLON.Axis.Y, -Math.PI / 2.0, BABYLON.Space.WORLD);
+        }
         this.bIsRevealed = true;
     };
     Card.prototype.IsRevealed = function () {
         return this.bIsRevealed;
     };
     Card.prototype.cover = function () {
-        this.mesh.lookAt(new BABYLON.Vector3(this.mesh.position.x, this.mesh.position.y + 2, this.mesh.position.z));
-        this.mesh.rotate(BABYLON.Axis.Y, -Math.PI / 2.0, BABYLON.Space.WORLD);
+        if (this.bIsRevealed) {
+            this.mesh.lookAt(new BABYLON.Vector3(this.mesh.position.x, this.mesh.position.y + 2, this.mesh.position.z));
+            this.mesh.rotate(BABYLON.Axis.Y, -Math.PI / 2.0, BABYLON.Space.WORLD);
+        }
         this.bIsRevealed = false;
     };
     return Card;
@@ -855,6 +859,7 @@ var CardGame = /** @class */ (function (_super) {
     CardGame.prototype.onRequest = function (req) {
         var _this = this;
         _super.prototype.onRequest.call(this, req);
+        this.players.forEach(function (p) { return p.onRequest(req); });
         if (typeof req.action === "string") {
             if ("!nextTurn" == req.action) {
                 if (this.IsHostInstance()) {

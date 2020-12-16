@@ -91,8 +91,10 @@ export class Card {
     }
 
     public reveal(): void {
-        this.mesh.lookAt(new BABYLON.Vector3(this.mesh.position.x, this.mesh.position.y - 2, this.mesh.position.z));
-        this.mesh.rotate(BABYLON.Axis.Y, -Math.PI / 2.0, BABYLON.Space.WORLD);
+        if (!this.bIsRevealed) {
+            this.mesh.lookAt(new BABYLON.Vector3(this.mesh.position.x, this.mesh.position.y - 2, this.mesh.position.z));
+            this.mesh.rotate(BABYLON.Axis.Y, -Math.PI / 2.0, BABYLON.Space.WORLD);
+        }
         this.bIsRevealed = true;
     }
 
@@ -101,8 +103,10 @@ export class Card {
     }
 
     public cover(): void {
-        this.mesh.lookAt(new BABYLON.Vector3(this.mesh.position.x, this.mesh.position.y + 2, this.mesh.position.z));
-        this.mesh.rotate(BABYLON.Axis.Y, -Math.PI / 2.0, BABYLON.Space.WORLD);
+        if (this.bIsRevealed) {
+            this.mesh.lookAt(new BABYLON.Vector3(this.mesh.position.x, this.mesh.position.y + 2, this.mesh.position.z));
+            this.mesh.rotate(BABYLON.Axis.Y, -Math.PI / 2.0, BABYLON.Space.WORLD);
+        }
         this.bIsRevealed = false;
     }
 }
@@ -1041,6 +1045,8 @@ export abstract class CardGame extends BaseGame {
 
     public onRequest(req: GameRequest) {
         super.onRequest(req);
+
+        this.players.forEach(p => p.onRequest(req));
 
         if (typeof req.action === "string") {
             if("!nextTurn" == req.action) {

@@ -270,6 +270,7 @@ class TheGame extends CardGame {
             // initialize all players
             this.players.forEach(p => {
                 p.drawCards((<TheGameCardDeck>this.Deck).GetDrawStack());
+                p.GetCards().forEach(c => c.reveal());
             });
         }
 
