@@ -166,7 +166,7 @@ class TheGameGUI extends BaseGameGUI {
         this.AVotingUI = new VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), this.Game, (val: String) => {
             self.AVotingUI.removeAll();
 
-            VotingUI.onGameStartVoteResult = (this.Game as CardGame).setPlayerToStart;
+            VotingUI.onGameStartVoteResult = (res) => (self.Game as CardGame).setPlayerToStart(res);
 
             self.AVotingUI.postVote("vote", "PlayerStart", val, (this.Game as CardGame).GetLocalPlayer());
 
