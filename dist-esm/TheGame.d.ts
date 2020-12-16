@@ -21,6 +21,7 @@ declare class TheGameGUI extends BaseGameGUI {
     ShowNextRoundBtn(): void;
     SetEnabledNextRoundBtn(val: boolean): void;
     HideNextRoundBtn(): void;
+    onRequest(req: GameRequest): void;
 }
 declare class TheGame extends CardGame {
     gameType: string;

@@ -443,8 +443,13 @@ export class SVEGame {
 
     public sendGameRequest(req: GameRequest) {
         this.connections.forEach(c => c.send(req));
-        this.onRequest(req);
+        if(this.IsHostInstance())
+            this.onRequest(req);
     }
+
+    public GetPlayersCount(): number {
+        return this.playerList.length;
+    };
 }
 
 export default abstract class BaseGame extends SVEGame {
@@ -452,7 +457,6 @@ export default abstract class BaseGame extends SVEGame {
     public abstract Tick(): void;
 //    public abstract AddPlayer(user: SVEAccount, isLocal: Boolean): void;
     public abstract MinPlayers(): number;
-    public abstract GetPlayersCount(): number;
     public OnNewPlayer: () => void = () => {};
     public onJoined(player: SVEAccount) {
         super.onJoined(player);

@@ -143,20 +143,12 @@ var TheGameGUI = /** @class */ (function (_super) {
         this.GUI.addControl(this.GameStateText);
     };
     TheGameGUI.prototype.ShowVotePlayerStart = function () {
+        var _this = this;
         var self = this;
-        this.AVotingUI = new VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), function (val) {
+        this.AVotingUI = new VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), this.Game.GetPlayersCount(), function (val) {
             self.AVotingUI.removeAll();
-            self.Game.sendGameRequest({
-                action: {
-                    field: "!vote",
-                    value: {
-                        voteType: "vote",
-                        voteID: "PlayerStart",
-                        value: val
-                    }
-                },
-                invoker: String(self.Game.GetLocalPlayerID())
-            });
+            self.AVotingUI.onGameStartVoteResult = _this.Game.setPlayerToStart;
+            self.AVotingUI.postVote("vote", "PlayerStart", val, _this.Game.GetLocalPlayer());
             self.AVotingUI = null;
         });
     };
@@ -175,6 +167,11 @@ var TheGameGUI = /** @class */ (function (_super) {
     };
     TheGameGUI.prototype.HideNextRoundBtn = function () {
         this.GUI.removeControl(this.EndRoundBtn);
+    };
+    TheGameGUI.prototype.onRequest = function (req) {
+        if (this.AVotingUI !== null) {
+            this.AVotingUI.onRequest(req);
+        }
     };
     return TheGameGUI;
 }(BaseGameGUI));
@@ -319,52 +316,7 @@ var TheGame = /** @class */ (function (_super) {
     };
     TheGame.prototype.onRequest = function (req) {
         _super.prototype.onRequest.call(this, req);
-        if (typeof req.action !== "string") {
-            if ("!vote" == req.action.field && req.action.value.voteType == "vote") {
-                if (this.IsHostInstance()) {
-                    var result = req.action.value;
-                    this.votesList.push(result.value);
-                    if (result.voteID == "PlayerStart" && this.votesList.length == this.players.length) {
-                        var s_1 = new Set(this.votesList);
-                        var c = 0;
-                        var res = s_1[0];
-                        var _loop_2 = function (i) {
-                            var c1 = this_2.votesList.filter(function (v) { return v == s_1[i]; }).length;
-                            if (c1 > c) {
-                                c = c1;
-                                res = s_1[i];
-                            }
-                        };
-                        var this_2 = this;
-                        for (var i = 0; i < s_1.size; i++) {
-                            _loop_2(i);
-                        }
-                        console.log("Got voting result for player start: " + res);
-                        this.sendGameRequest({
-                            action: {
-                                field: "!setTurn",
-                                value: res,
-                            },
-                            invoker: String(this.GetLocalPlayerID())
-                        });
-                    }
-                }
-                return;
-            }
-            if ("!setTurn" == req.action.field && this.IsHostInstance()) {
-                this.playerIndexThatHasTurn = this.players.findIndex(function (p) { return p.getName() == req.action.value; }) - 1;
-                if (this.playerIndexThatHasTurn < -1) {
-                    this.playerIndexThatHasTurn = this.players.length - 2;
-                }
-                else {
-                    if (this.playerIndexThatHasTurn > this.players.length - 1) {
-                        this.playerIndexThatHasTurn = -1;
-                    }
-                }
-                this.UpdateGameDirection(1);
-                this.InvokeNextPlayerRound();
-            }
-        }
+        this.GUI.onRequest(req);
     };
     TheGame.prototype.onPlayersRoundBegin = function (player) {
         _super.prototype.onPlayersRoundBegin.call(this, player);
@@ -386,23 +338,6 @@ var TheGame = /** @class */ (function (_super) {
     /*
     public OnServerResponse(result: any): void {
         super.OnServerResponse(result);
-
-        if (result.type == "vote") {
-            if (this.bIsHosting) {
-                if (result.voteID == "PlayerStart") {
-                    console.log("Got voting result for player start: " + result.value);
-
-                    this.sendGameRequest({
-                        action: {
-                            field: "!setTurn",
-                            value: result.value,
-                        },
-                        invoker: String(this.GetLocalPlayerID())
-                    });
-                }
-            }
-            return;
-        }
 
         if (result.type == "gameState") {
             let gs: GameState = (result.value == "lost") ? GameState.Lost : GameState.Won;

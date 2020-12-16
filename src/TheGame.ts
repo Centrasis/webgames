@@ -163,20 +163,12 @@ class TheGameGUI extends BaseGameGUI {
 
     public ShowVotePlayerStart(): void {
         var self = this;
-        this.AVotingUI = new VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), (val: String) => {
+        this.AVotingUI = new VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), this.Game.GetPlayersCount(), (val: String) => {
             self.AVotingUI.removeAll();
 
-            self.Game.sendGameRequest({
-                action: { 
-                    field: "!vote",
-                    value: {
-                        voteType: "vote",
-                        voteID: "PlayerStart",
-                        value: val
-                    }
-                },
-                invoker: String((<CardGame>self.Game).GetLocalPlayerID())
-            });
+            self.AVotingUI.onGameStartVoteResult = (this.Game as CardGame).setPlayerToStart;
+
+            self.AVotingUI.postVote("vote", "PlayerStart", val, (this.Game as CardGame).GetLocalPlayer());
 
             self.AVotingUI = null;
         });
@@ -201,6 +193,12 @@ class TheGameGUI extends BaseGameGUI {
 
     public HideNextRoundBtn(): void {
         this.GUI.removeControl(this.EndRoundBtn);
+    }
+
+    public onRequest(req: GameRequest) {
+        if(this.AVotingUI !== null) {
+            this.AVotingUI.onRequest(req);
+        }
     }
 }
 
@@ -373,50 +371,7 @@ class TheGame extends CardGame {
     public onRequest(req: GameRequest) {
         super.onRequest(req);
 
-        if(typeof req.action !== "string") {
-            if("!vote" == req.action.field && (req.action.value.voteType as string) == "vote") {
-                if (this.IsHostInstance()) {
-                    let result = req.action.value;
-                    this.votesList.push(result.value);
-                    if (result.voteID == "PlayerStart" && this.votesList.length == this.players.length) {
-                        let s = new Set(this.votesList);
-                        let c = 0;
-                        let res = s[0];
-                        for (let i = 0; i < s.size; i++) {
-                            let c1 = this.votesList.filter(v => v == s[i]).length;
-                            if (c1 > c) {
-                                c = c1;
-                                res = s[i];
-                            }
-                        } 
-                        console.log("Got voting result for player start: " + res);
-    
-                        this.sendGameRequest({
-                            action: {
-                                field: "!setTurn",
-                                value: res,
-                            },
-                            invoker: String(this.GetLocalPlayerID())
-                        });
-                    }
-                }
-                return;
-            }
-
-            if("!setTurn" == req.action.field && this.IsHostInstance()) {
-                this.playerIndexThatHasTurn = this.players.findIndex(p => p.getName() == (req.action as SetDataRequest).value as string) - 1;
-                if (this.playerIndexThatHasTurn < -1) {
-                    this.playerIndexThatHasTurn = this.players.length - 2;
-                } else {
-                    if(this.playerIndexThatHasTurn > this.players.length - 1) {
-                        this.playerIndexThatHasTurn = -1;
-                    }
-                }
-
-                this.UpdateGameDirection(1);
-                this.InvokeNextPlayerRound();
-            }
-        }
+        this.GUI.onRequest(req);
     }
 
     protected onPlayersRoundBegin(player: Player) {
@@ -443,23 +398,6 @@ class TheGame extends CardGame {
     /*
     public OnServerResponse(result: any): void {
         super.OnServerResponse(result);
-
-        if (result.type == "vote") {
-            if (this.bIsHosting) {
-                if (result.voteID == "PlayerStart") {
-                    console.log("Got voting result for player start: " + result.value);
-
-                    this.sendGameRequest({
-                        action: {
-                            field: "!setTurn",
-                            value: result.value,
-                        },
-                        invoker: String(this.GetLocalPlayerID())
-                    });
-                }
-            }
-            return;
-        }
 
         if (result.type == "gameState") {
             let gs: GameState = (result.value == "lost") ? GameState.Lost : GameState.Won;

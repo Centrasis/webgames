@@ -628,9 +628,13 @@ export class PlayerListUI {
 export class VotingUI {
     protected GUI: GUI.AdvancedDynamicTexture;
     protected votes: GUI.Button[];
+    protected Game: BaseGame;
     protected caption: GUI.TextBlock;
+    protected votesList: string[] = [];
+    protected playersCount: number = 0;
+    public onGameStartVoteResult: (res: string) => void = (res) => {};
 
-    constructor(gui: GUI.AdvancedDynamicTexture, caption: string, votes: string[], onVote: (val: String) => void) {
+    constructor(gui: GUI.AdvancedDynamicTexture, caption: string, votes: string[], playersCount: number, onVote: (val: String) => void) {
         this.GUI = gui;
         this.votes = [];
         this.caption = new GUI.TextBlock("", caption);
@@ -639,6 +643,7 @@ export class VotingUI {
         this.caption.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         this.caption.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
         this.GUI.addControl(this.caption);
+        this.playersCount = playersCount;
 
         let i = 0;
         votes.forEach((p) => {
@@ -671,6 +676,46 @@ export class VotingUI {
         })
 
         this.GUI.removeControl(this.caption);
+    }
+
+    public postVote(voteType: "vote" | "SelfOnly", voteID: string, value: any, player: Player) {
+        this.Game.sendGameRequest({
+            action: { 
+                field: "!vote",
+                value: {
+                    voteType: voteType,
+                    voteID: voteID,
+                    value: value
+                }
+            },
+            invoker: player.getName()
+        });
+    }
+
+    public onRequest(req: GameRequest) {
+        if(typeof req.action !== "string") {
+            if("!vote" == req.action.field && (req.action.value.voteType as string) == "vote") {
+                let result = req.action.value;
+                console.log("Counting vote: " + JSON.stringify(result.value));
+                this.votesList.push(result.value);
+                if (result.voteID == "PlayerStart" && this.votesList.length == this.playersCount) {
+                    let s = new Set(this.votesList);
+                    let c = 0;
+                    let res = s[0];
+                    for (let i = 0; i < s.size; i++) {
+                        let c1 = this.votesList.filter(v => v == s[i]).length;
+                        if (c1 > c) {
+                            c = c1;
+                            res = s[i];
+                        }
+                    } 
+                    console.log("Got voting result for player start: " + res);
+
+                    this.onGameStartVoteResult(res);
+                }
+                return;
+            }
+        }
     }
 }
 
@@ -745,6 +790,22 @@ export abstract class CardGame extends BaseGame {
         this.scene.onPointerDown = this.OnSelect.bind(this);
         this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
         this.OnSelect(null, null);
+    }
+
+    public setPlayerToStart(name: string) {
+        if (this.IsHostInstance()) {
+            this.sendGameRequest({
+                action: {
+                    field: "!setTurn",
+                    value: name,
+                },
+                invoker: this.localPlayer.getName(),
+                target: {
+                    type: TargetType.Game,
+                    id: ""
+                }
+            });
+        }
     }
 
     public CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene {
@@ -921,17 +982,7 @@ export abstract class CardGame extends BaseGame {
                     this.playerIndexThatHasTurn = 0;
                 }
             }
-            this.sendGameRequest({
-                action: { 
-                    field: "!nextTurn",
-                    value: this.players[this.playerIndexThatHasTurn].getName()
-                },
-                invoker: this.localPlayer.getName(),
-                target: {
-                    type: TargetType.Game,
-                    id: ""
-                }
-            });
+            this.setPlayerToStart(this.players[this.playerIndexThatHasTurn].getName());
         } else {
             this.sendGameRequest({
                 action: "!nextTurn",
@@ -1016,6 +1067,13 @@ export abstract class CardGame extends BaseGame {
                 return;
             }
 
+            if("!setTurn" == req.action.field) {
+                if ((req.action.value as string) == this.localPlayer.getName())
+                {
+                    this.StartLocalPlayersRound();
+                }
+            }
+
             if("!playDirection" == req.action.field) {
                 this.playDirection = Number(req.action.value);
                 this.onGameDirectionChanged();
@@ -1074,6 +1132,10 @@ export abstract class CardGame extends BaseGame {
 
     public GetLocalPlayerID(): String {
         return this.localPlayer.getName();
+    }
+
+    public GetLocalPlayer(): Player {
+        return this.localPlayer;
     }
 
     public OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo) {

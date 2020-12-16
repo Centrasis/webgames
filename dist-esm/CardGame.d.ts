@@ -137,9 +137,15 @@ export declare class PlayerListUI {
 export declare class VotingUI {
     protected GUI: GUI.AdvancedDynamicTexture;
     protected votes: GUI.Button[];
+    protected Game: BaseGame;
     protected caption: GUI.TextBlock;
-    constructor(gui: GUI.AdvancedDynamicTexture, caption: string, votes: string[], onVote: (val: String) => void);
+    protected votesList: string[];
+    protected playersCount: number;
+    onGameStartVoteResult: (res: string) => void;
+    constructor(gui: GUI.AdvancedDynamicTexture, caption: string, votes: string[], playersCount: number, onVote: (val: String) => void);
     removeAll(): void;
+    postVote(voteType: "vote" | "SelfOnly", voteID: string, value: any, player: Player): void;
+    onRequest(req: GameRequest): void;
 }
 export declare class BaseGameGUI {
     protected GUI: GUI.AdvancedDynamicTexture;
@@ -165,6 +171,7 @@ export declare abstract class CardGame extends BaseGame {
     StartLocalPlayersRound(): void;
     SetInitialCardCount(cardsCount: number): void;
     onStart(): void;
+    setPlayerToStart(name: string): void;
     CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     protected OnEndLocalRound(): void;
     InvokeNextPlayerRound(): void;
@@ -176,6 +183,7 @@ export declare abstract class CardGame extends BaseGame {
     protected onGameDirectionChanged(): void;
     GetLocalPlayDirection(): number;
     GetLocalPlayerID(): String;
+    GetLocalPlayer(): Player;
     OnSelect(evt: PointerEvent, pickInfo: BABYLON.PickingInfo): void;
     onEnd(): void;
     GetPlayersCount(): number;

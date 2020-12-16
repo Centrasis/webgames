@@ -43,12 +43,12 @@ export declare class SVEGame {
     leave(player: SVEAccount): void;
     getAsInitializer(): GameInfo;
     sendGameRequest(req: GameRequest): void;
+    GetPlayersCount(): number;
 }
 export default abstract class BaseGame extends SVEGame {
     abstract CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     abstract Tick(): void;
     abstract MinPlayers(): number;
-    abstract GetPlayersCount(): number;
     OnNewPlayer: () => void;
     onJoined(player: SVEAccount): void;
     MaxPlayers(): number;

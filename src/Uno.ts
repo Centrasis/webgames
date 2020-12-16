@@ -429,20 +429,10 @@ class UNOGUI extends BaseGameGUI {
 
     public ShowColorWish(ug: UNO): void {
         var self = this;
-        this.AVotingUI = new VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], (val: String) => {
+        this.AVotingUI = new VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], (self.Game as CardGame).GetPlayersCount(), (val: String) => {
             self.AVotingUI.removeAll();
 
-            self.Game.sendGameRequest({
-                action: { 
-                    field: "!vote",
-                    value: {
-                        voteType: "SelfOnly",
-                        voteID: "ColorWish",
-                        value: val
-                    }
-                },
-                invoker: String((<CardGame>self.Game).GetLocalPlayerID())
-            });
+            self.AVotingUI.postVote("SelfOnly", "ColorWish", val, (self.Game as CardGame).GetLocalPlayer());
 
             self.AVotingUI = null;
             ug.OnEndLocalRound();

@@ -512,19 +512,9 @@ var BusdriverGUI = /** @class */ (function (_super) {
             bd.OnEndLocalRound();
             return;
         }
-        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, challenge.ChallengeText, challenge.Answers, function (val) {
+        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, challenge.ChallengeText, challenge.Answers, bd.GetPlayersCount(), function (val) {
             self.AVotingUI.removeAll();
-            self.Game.sendGameRequest({
-                action: {
-                    field: "!vote",
-                    value: {
-                        voteType: "SelfOnly",
-                        voteID: String(challenge.name),
-                        value: val
-                    }
-                },
-                invoker: String(bd.GetLocalPlayerID())
-            });
+            self.AVotingUI.postVote("SelfOnly", challenge.name, val, bd.GetLocalPlayer());
             self.AVotingUI = null;
             bd.OnEndLocalRound();
         });

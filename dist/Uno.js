@@ -398,19 +398,9 @@ var UNOGUI = /** @class */ (function (_super) {
     };
     UNOGUI.prototype.ShowColorWish = function (ug) {
         var self = this;
-        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], function (val) {
+        this.AVotingUI = new CardGame_1.VotingUI(this.GUI, "Welche Farbe ist gewünscht?", ["Rot", "Grün", "Gelb", "Blau"], self.Game.GetPlayersCount(), function (val) {
             self.AVotingUI.removeAll();
-            self.Game.sendGameRequest({
-                action: {
-                    field: "!vote",
-                    value: {
-                        voteType: "SelfOnly",
-                        voteID: "ColorWish",
-                        value: val
-                    }
-                },
-                invoker: String(self.Game.GetLocalPlayerID())
-            });
+            self.AVotingUI.postVote("SelfOnly", "ColorWish", val, self.Game.GetLocalPlayer());
             self.AVotingUI = null;
             ug.OnEndLocalRound();
         });

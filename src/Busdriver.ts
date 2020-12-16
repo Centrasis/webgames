@@ -571,20 +571,10 @@ class BusdriverGUI extends BaseGameGUI {
             bd.OnEndLocalRound();
             return;
         }
-        this.AVotingUI = new VotingUI(this.GUI, challenge.ChallengeText, challenge.Answers, (val: String) => {
+        this.AVotingUI = new VotingUI(this.GUI, challenge.ChallengeText, challenge.Answers, bd.GetPlayersCount(), (val: String) => {
             self.AVotingUI.removeAll();
 
-            self.Game.sendGameRequest({
-                action: { 
-                    field: "!vote",
-                    value: {
-                        voteType: "SelfOnly",
-                        voteID: String(challenge.name),
-                        value: val
-                    }
-                },
-                invoker: String(bd.GetLocalPlayerID())
-            });
+            self.AVotingUI.postVote("SelfOnly", challenge.name, val, bd.GetLocalPlayer());
 
             self.AVotingUI = null;
             bd.OnEndLocalRound();

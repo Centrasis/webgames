@@ -510,8 +510,11 @@ var PlayerListUI = /** @class */ (function () {
 }());
 export { PlayerListUI };
 var VotingUI = /** @class */ (function () {
-    function VotingUI(gui, caption, votes, onVote) {
+    function VotingUI(gui, caption, votes, playersCount, onVote) {
         var _this = this;
+        this.votesList = [];
+        this.playersCount = 0;
+        this.onGameStartVoteResult = function (res) { };
         this.GUI = gui;
         this.votes = [];
         this.caption = new GUI.TextBlock("", caption);
@@ -520,6 +523,7 @@ var VotingUI = /** @class */ (function () {
         this.caption.horizontalAlignment = GUI.Control.HORIZONTAL_ALIGNMENT_CENTER;
         this.caption.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
         this.GUI.addControl(this.caption);
+        this.playersCount = playersCount;
         var i = 0;
         votes.forEach(function (p) {
             var id = p;
@@ -547,6 +551,47 @@ var VotingUI = /** @class */ (function () {
             _this.GUI.removeControl(b);
         });
         this.GUI.removeControl(this.caption);
+    };
+    VotingUI.prototype.postVote = function (voteType, voteID, value, player) {
+        this.Game.sendGameRequest({
+            action: {
+                field: "!vote",
+                value: {
+                    voteType: voteType,
+                    voteID: voteID,
+                    value: value
+                }
+            },
+            invoker: player.getName()
+        });
+    };
+    VotingUI.prototype.onRequest = function (req) {
+        if (typeof req.action !== "string") {
+            if ("!vote" == req.action.field && req.action.value.voteType == "vote") {
+                var result = req.action.value;
+                console.log("Counting vote: " + JSON.stringify(result.value));
+                this.votesList.push(result.value);
+                if (result.voteID == "PlayerStart" && this.votesList.length == this.playersCount) {
+                    var s_1 = new Set(this.votesList);
+                    var c = 0;
+                    var res = s_1[0];
+                    var _loop_1 = function (i) {
+                        var c1 = this_1.votesList.filter(function (v) { return v == s_1[i]; }).length;
+                        if (c1 > c) {
+                            c = c1;
+                            res = s_1[i];
+                        }
+                    };
+                    var this_1 = this;
+                    for (var i = 0; i < s_1.size; i++) {
+                        _loop_1(i);
+                    }
+                    console.log("Got voting result for player start: " + res);
+                    this.onGameStartVoteResult(res);
+                }
+                return;
+            }
+        }
     };
     return VotingUI;
 }());
@@ -605,6 +650,21 @@ var CardGame = /** @class */ (function (_super) {
         this.scene.onPointerDown = this.OnSelect.bind(this);
         this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
         this.OnSelect(null, null);
+    };
+    CardGame.prototype.setPlayerToStart = function (name) {
+        if (this.IsHostInstance()) {
+            this.sendGameRequest({
+                action: {
+                    field: "!setTurn",
+                    value: name,
+                },
+                invoker: this.localPlayer.getName(),
+                target: {
+                    type: TargetType.Game,
+                    id: ""
+                }
+            });
+        }
     };
     CardGame.prototype.CreateScene = function (engine, canvas) {
         this.players = [];
@@ -745,17 +805,7 @@ var CardGame = /** @class */ (function (_super) {
                     this.playerIndexThatHasTurn = 0;
                 }
             }
-            this.sendGameRequest({
-                action: {
-                    field: "!nextTurn",
-                    value: this.players[this.playerIndexThatHasTurn].getName()
-                },
-                invoker: this.localPlayer.getName(),
-                target: {
-                    type: TargetType.Game,
-                    id: ""
-                }
-            });
+            this.setPlayerToStart(this.players[this.playerIndexThatHasTurn].getName());
         }
         else {
             this.sendGameRequest({
@@ -831,6 +881,11 @@ var CardGame = /** @class */ (function (_super) {
                 }
                 return;
             }
+            if ("!setTurn" == req.action.field) {
+                if (req.action.value == this.localPlayer.getName()) {
+                    this.StartLocalPlayersRound();
+                }
+            }
             if ("!playDirection" == req.action.field) {
                 this.playDirection = Number(req.action.value);
                 this.onGameDirectionChanged();
@@ -881,6 +936,9 @@ var CardGame = /** @class */ (function (_super) {
     };
     CardGame.prototype.GetLocalPlayerID = function () {
         return this.localPlayer.getName();
+    };
+    CardGame.prototype.GetLocalPlayer = function () {
+        return this.localPlayer;
     };
     CardGame.prototype.OnSelect = function (evt, pickInfo) {
         if (this.localPlayer == null)

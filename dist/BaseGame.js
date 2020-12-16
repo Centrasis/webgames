@@ -426,8 +426,13 @@ var SVEGame = /** @class */ (function () {
     };
     SVEGame.prototype.sendGameRequest = function (req) {
         this.connections.forEach(function (c) { return c.send(req); });
-        this.onRequest(req);
+        if (this.IsHostInstance())
+            this.onRequest(req);
     };
+    SVEGame.prototype.GetPlayersCount = function () {
+        return this.playerList.length;
+    };
+    ;
     return SVEGame;
 }());
 exports.SVEGame = SVEGame;
