@@ -39,6 +39,7 @@ var SVEGame = /** @class */ (function () {
         };
         this.OnGameRejected = function (r) { };
         this.OnGameStart = function () { };
+        this.OnNewPlayer = function () { };
         this.OnConnected = function (s) { };
         this.host = info.host;
         this.hostPeerID = (info.peerID !== undefined) ? info.peerID : "";
@@ -67,7 +68,11 @@ var SVEGame = /** @class */ (function () {
                     }
                 });
                 c.on('close', function () {
-                    console.log("A player connection was closed");
+                    console.log("A player connection was closed (" + JSON.stringify(c.metadata) + ")");
+                    _this.connections = _this.connections.filter(function (cc) { return cc.metadata.client !== c.metadata.client; });
+                    _this.playerList = _this.playerList.filter(function (p) { return p.getName() !== c.metadata.client; });
+                    _this.updateInfos();
+                    _this.OnNewPlayer();
                 });
                 c.on('data', function (e) {
                     _this.onRequest(e);
@@ -183,6 +188,7 @@ var SVEGame = /** @class */ (function () {
     SVEGame.prototype.onJoined = function (player) {
         this.playerList.push(player);
         this.updateInfos();
+        this.OnNewPlayer();
     };
     SVEGame.prototype.onEnd = function () {
         this.bIsRunning = false;
@@ -441,14 +447,8 @@ exports.SVEGame = SVEGame;
 var BaseGame = /** @class */ (function (_super) {
     __extends(BaseGame, _super);
     function BaseGame() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.OnNewPlayer = function () { };
-        return _this;
+        return _super !== null && _super.apply(this, arguments) || this;
     }
-    BaseGame.prototype.onJoined = function (player) {
-        _super.prototype.onJoined.call(this, player);
-        this.OnNewPlayer();
-    };
     BaseGame.prototype.MaxPlayers = function () {
         return this.maxPlayers;
     };

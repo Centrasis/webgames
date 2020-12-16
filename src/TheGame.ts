@@ -267,6 +267,10 @@ class TheGame extends CardGame {
             }
 
             this.SetInitialCardCount(cardsCount);
+            // initialize all players
+            this.players.forEach(p => {
+                p.drawCards((<TheGameCardDeck>this.Deck).GetDrawStack());
+            });
         }
 
         super.StartGame();

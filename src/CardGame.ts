@@ -387,6 +387,16 @@ export class Player extends SVEAccount {
         this.phase = p;
     }
 
+    public onRequest(req: GameRequest) {
+        if(req.target !== undefined && req.target.type == TargetType.Player && req.target.id == this.getName()) {
+            if (typeof req.action !== "string") {
+                if(req.action.field == "maxCardCount") {
+                    this.maxCardCount = Number(req.action.field);
+                }
+            }
+        }
+    }
+
     public commitToServer(): void {
         this.Game.sendGameRequest({
             action: {
@@ -1033,17 +1043,6 @@ export abstract class CardGame extends BaseGame {
         super.onRequest(req);
 
         if (typeof req.action === "string") {
-            if("!drawCard" == req.action) {
-                this.players.forEach((p) => {
-                    if (p.getName() == req.target.id) {
-                        this.Deck.Game = this;
-                        this.Deck.GiveCardByNameTo((req.action as SetDataRequest).value, p);
-                        this.GUI.PlayerList.UpdatePlayer(p);
-                    }
-                });
-                return;
-            }
-
             if("!nextTurn" == req.action) {
                 if(this.IsHostInstance()) {
                     this.InvokeNextPlayerRound();
@@ -1065,6 +1064,17 @@ export abstract class CardGame extends BaseGame {
                         }
                     });
                 }
+                return;
+            }
+
+            if("!drawCard" == req.action.field) {
+                this.players.forEach((p) => {
+                    if (p.getName() == req.target.id) {
+                        this.Deck.Game = this;
+                        this.Deck.GiveCardByNameTo((req.action as SetDataRequest).value, p);
+                        this.GUI.PlayerList.UpdatePlayer(p);
+                    }
+                });
                 return;
             }
 

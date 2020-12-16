@@ -97,6 +97,7 @@ export declare class Player extends SVEAccount {
     constructor(decoratee: SVEAccount, maxCardCount: number, isLocal: Boolean);
     GetPhase(): PlayerGamePhase;
     SetPhase(p: PlayerGamePhase): void;
+    onRequest(req: GameRequest): void;
     commitToServer(): void;
     /** No replication */
     dropCards(): void;

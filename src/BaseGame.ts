@@ -41,6 +41,7 @@ export class SVEGame {
 
     public OnGameRejected: (reason: GameRejectReason) => void = (r) => {};
     public OnGameStart: () => void = () => {};
+    public OnNewPlayer: () => void = () => {};
 
     public IsHostInstance(): boolean {
         return this.bIsHost;
@@ -63,7 +64,11 @@ export class SVEGame {
                 });
 
                 c.on('close', () => {
-                    console.log("A player connection was closed");
+                    console.log("A player connection was closed (" + JSON.stringify(c.metadata) + ")");
+                    this.connections = this.connections.filter(cc => cc.metadata.client !== c.metadata.client);
+                    this.playerList = this.playerList.filter(p => p.getName() !== c.metadata.client);
+                    this.updateInfos();
+                    this.OnNewPlayer();
                 });
 
                 c.on('data', (e:any) => {
@@ -186,6 +191,7 @@ export class SVEGame {
     public onJoined(player: SVEAccount) {
         this.playerList.push(player);
         this.updateInfos();
+        this.OnNewPlayer();
     }
 
     public OnConnected: (success: Boolean) => void = (s) => {};
@@ -459,11 +465,6 @@ export default abstract class BaseGame extends SVEGame {
     public abstract Tick(): void;
 //    public abstract AddPlayer(user: SVEAccount, isLocal: Boolean): void;
     public abstract MinPlayers(): number;
-    public OnNewPlayer: () => void = () => {};
-    public onJoined(player: SVEAccount) {
-        super.onJoined(player);
-        this.OnNewPlayer();
-    }
 
     public MaxPlayers(): number {
         return this.maxPlayers;

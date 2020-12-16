@@ -22,6 +22,7 @@ export declare class SVEGame {
     constructor(info: GameInfo);
     OnGameRejected: (reason: GameRejectReason) => void;
     OnGameStart: () => void;
+    OnNewPlayer: () => void;
     IsHostInstance(): boolean;
     IsRunning(): boolean;
     protected setupHostPeerConnection(): Promise<void>;
@@ -50,8 +51,6 @@ export default abstract class BaseGame extends SVEGame {
     abstract CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     abstract Tick(): void;
     abstract MinPlayers(): number;
-    OnNewPlayer: () => void;
-    onJoined(player: SVEAccount): void;
     MaxPlayers(): number;
 }
 //# sourceMappingURL=BaseGame.d.ts.map

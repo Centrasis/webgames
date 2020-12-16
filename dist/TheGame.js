@@ -252,6 +252,7 @@ var TheGame = /** @class */ (function (_super) {
         this.GUI.SetEnabledNextRoundBtn(false);
     };
     TheGame.prototype.StartGame = function () {
+        var _this = this;
         if (this.IsHostInstance()) {
             var cardsCount = 8;
             if (this.players.length == 2) {
@@ -261,6 +262,10 @@ var TheGame = /** @class */ (function (_super) {
                 cardsCount = 6;
             }
             this.SetInitialCardCount(cardsCount);
+            // initialize all players
+            this.players.forEach(function (p) {
+                p.drawCards(_this.Deck.GetDrawStack());
+            });
         }
         _super.prototype.StartGame.call(this);
     };

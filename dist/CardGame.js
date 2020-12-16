@@ -344,6 +344,15 @@ var Player = /** @class */ (function (_super) {
     Player.prototype.SetPhase = function (p) {
         this.phase = p;
     };
+    Player.prototype.onRequest = function (req) {
+        if (req.target !== undefined && req.target.type == svebaselib_1.TargetType.Player && req.target.id == this.getName()) {
+            if (typeof req.action !== "string") {
+                if (req.action.field == "maxCardCount") {
+                    this.maxCardCount = Number(req.action.field);
+                }
+            }
+        }
+    };
     Player.prototype.commitToServer = function () {
         this.Game.sendGameRequest({
             action: {
@@ -872,16 +881,6 @@ var CardGame = /** @class */ (function (_super) {
         var _this = this;
         _super.prototype.onRequest.call(this, req);
         if (typeof req.action === "string") {
-            if ("!drawCard" == req.action) {
-                this.players.forEach(function (p) {
-                    if (p.getName() == req.target.id) {
-                        _this.Deck.Game = _this;
-                        _this.Deck.GiveCardByNameTo(req.action.value, p);
-                        _this.GUI.PlayerList.UpdatePlayer(p);
-                    }
-                });
-                return;
-            }
             if ("!nextTurn" == req.action) {
                 if (this.IsHostInstance()) {
                     this.InvokeNextPlayerRound();
@@ -905,6 +904,16 @@ var CardGame = /** @class */ (function (_super) {
                         }
                     });
                 }
+                return;
+            }
+            if ("!drawCard" == req.action.field) {
+                this.players.forEach(function (p) {
+                    if (p.getName() == req.target.id) {
+                        _this.Deck.Game = _this;
+                        _this.Deck.GiveCardByNameTo(req.action.value, p);
+                        _this.GUI.PlayerList.UpdatePlayer(p);
+                    }
+                });
                 return;
             }
             if ("!setTurn" == req.action.field) {
