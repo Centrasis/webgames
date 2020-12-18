@@ -176,7 +176,7 @@ export declare abstract class CardGame extends BaseGame {
     setPlayerToStart(name: string): void;
     CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     protected OnEndLocalRound(): void;
-    InvokeNextPlayerRound(): void;
+    InvokeNextPlayerRound(pName?: string): void;
     onJoined(user: SVEAccount): void;
     protected onPlayersRoundBegin(player: Player): void;
     protected onNotify(notification: string, invoker: Player, target?: Player): void;

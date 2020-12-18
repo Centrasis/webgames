@@ -985,11 +985,14 @@ export abstract class CardGame extends BaseGame {
         this.InvokeNextPlayerRound();
     }
 
-    public InvokeNextPlayerRound() {
+    public InvokeNextPlayerRound(pName: string = "") {
         this.SetGameState(this.CheckGameState());
         if (this.IsHostInstance()) {
-            console.log("Invoke next round as host");
-            this.playerIndexThatHasTurn += this.playDirection;
+            if (pName.length === 0) {
+                this.playerIndexThatHasTurn += this.playDirection;
+            } else {
+                this.playerIndexThatHasTurn = this.players.findIndex(p => p.getName() == pName);
+            }
             if (this.playerIndexThatHasTurn < 0) {
                 this.playerIndexThatHasTurn = this.players.length - 1;
             } else {
@@ -999,7 +1002,6 @@ export abstract class CardGame extends BaseGame {
             }
             this.setPlayerToStart(this.players[this.playerIndexThatHasTurn].getName());
         } else {
-            console.log("Invoke next round as client");
             this.sendGameRequest({
                 action: "!nextTurn",
                 invoker: this.localPlayer.getName(),
