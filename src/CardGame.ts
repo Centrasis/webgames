@@ -172,7 +172,7 @@ export class CardStack {
     }
 
     public GiveCardByNameTo(card_name: String, player: Player): void {
-        let card = null;
+        let card: Card = null;
         for (let i = 0; i < this.Cards.length; i++) {
             if (this.Cards[i].GetMesh().name == card_name) {
                 card = this.Cards[i];
@@ -183,6 +183,7 @@ export class CardStack {
     
         if(card != null) {
             player.AddCardLocal(card);
+            card.reveal();
         }
 
         this.setPosition(this.position);

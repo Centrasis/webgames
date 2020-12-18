@@ -177,6 +177,7 @@ var CardStack = /** @class */ (function () {
         this.Cards = this.Cards.filter(function (e) { return e.GetMesh().name != card_name; });
         if (card != null) {
             player.AddCardLocal(card);
+            card.reveal();
         }
         this.setPosition(this.position);
     };
