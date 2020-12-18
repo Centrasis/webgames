@@ -170,7 +170,7 @@ var TheGameGUI = /** @class */ (function (_super) {
         var self = this;
         this.AVotingUI = new CardGame_1.VotingUI(this.GUI, "Wer fängt an?", this.PlayerList.GetPlayersTexts(), this.Game, function (val) {
             self.AVotingUI.removeAll();
-            CardGame_1.VotingUI.onGameStartVoteResult = function (res) { return self.Game.setPlayerToStart(res); };
+            CardGame_1.VotingUI.onGameStartVoteResult = function (res) { self.Game.setPlayerToStart(res); };
             self.AVotingUI.postVote("vote", "PlayerStart", val, _this.Game.GetLocalPlayer());
             self.AVotingUI = null;
         });

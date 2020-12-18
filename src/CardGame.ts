@@ -643,6 +643,7 @@ export class VotingUI {
     protected static Game: SVEGame;
     protected caption: GUI.TextBlock;
     protected static votesList: string[] = [];
+    protected static votersList: string[] = [];
     protected static playersCount: number = 0;
     public static onGameStartVoteResult: (res: string) => void = (res) => {};
 
@@ -657,6 +658,8 @@ export class VotingUI {
         this.caption.verticalAlignment = GUI.Control.VERTICAL_ALIGNMENT_TOP;
         this.GUI.addControl(this.caption);
         VotingUI.playersCount = game.GetPlayersCount();
+        VotingUI.votersList = [];
+        VotingUI.votesList = [];
 
         let i = 0;
         votes.forEach((p) => {
@@ -709,22 +712,25 @@ export class VotingUI {
         if(typeof req.action !== "string") {
             if("!vote" == req.action.field && (req.action.value.voteType as string) == "vote") {
                 let result = req.action.value;
-                console.log("Counting vote: " + JSON.stringify(result.value));
-                VotingUI.votesList.push(result.value);
-                if (result.voteID == "PlayerStart" && this.votesList.length == this.playersCount) {
-                    let s = Array.from(new Set(VotingUI.votesList));
-                    let c = 0;
-                    let res = s[0];
-                    for (let i = 0; i < s.length; i++) {
-                        let c1 = VotingUI.votesList.filter(v => v == s[i]).length;
-                        if (c1 > c) {
-                            c = c1;
-                            res = s[i];
+                if (VotingUI.votersList.indexOf(req.invoker) < 0) {
+                    console.log("Counting vote: " + JSON.stringify(result.value));
+                    VotingUI.votesList.push(result.value);
+                    VotingUI.votersList.push(req.invoker);
+                    if (result.voteID == "PlayerStart" && this.votesList.length == this.playersCount) {
+                        let s = Array.from(new Set(VotingUI.votesList));
+                        let c = 0;
+                        let res = s[0];
+                        for (let i = 0; i < s.length; i++) {
+                            let c1 = VotingUI.votesList.filter(v => v == s[i]).length;
+                            if (c1 > c) {
+                                c = c1;
+                                res = s[i];
+                            }
                         }
-                    } 
-                    console.log("Got voting result for player start: " + res);
+                        console.log("Got voting result for player start: " + res);
 
-                    VotingUI.onGameStartVoteResult(res);
+                        VotingUI.onGameStartVoteResult(res);
+                    }
                 }
                 return;
             }
@@ -803,7 +809,9 @@ export abstract class CardGame extends BaseGame {
     }
 
     public setPlayerToStart(name: string) {
+        console.log("Try set player turn: " + name);
         if (this.IsHostInstance()) {
+            console.log("Do set player turn: " + name);
             this.sendGameRequest({
                 action: {
                     field: "!setTurn",

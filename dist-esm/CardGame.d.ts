@@ -141,6 +141,7 @@ export declare class VotingUI {
     protected static Game: SVEGame;
     protected caption: GUI.TextBlock;
     protected static votesList: string[];
+    protected static votersList: string[];
     protected static playersCount: number;
     static onGameStartVoteResult: (res: string) => void;
     constructor(gui: GUI.AdvancedDynamicTexture, caption: string, votes: string[], game: SVEGame, onVote: (val: String) => void);
