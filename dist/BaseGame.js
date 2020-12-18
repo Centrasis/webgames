@@ -75,7 +75,6 @@ var SVEGame = /** @class */ (function () {
                     _this.OnNewPlayer();
                 });
                 c.on('data', function (e) {
-                    _this.onRequest(e);
                     // broadcasting
                     _this.sendGameRequest(e);
                 });

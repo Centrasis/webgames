@@ -72,7 +72,6 @@ export class SVEGame {
                 });
 
                 c.on('data', (e:any) => {
-                    this.onRequest(e as GameRequest);
                     // broadcasting
                     this.sendGameRequest(e as GameRequest);
                 });

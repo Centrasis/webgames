@@ -694,9 +694,7 @@ var CardGame = /** @class */ (function (_super) {
         this.OnSelect(null, null);
     };
     CardGame.prototype.setPlayerToStart = function (name) {
-        console.log("Try set player turn: " + name);
         if (this.IsHostInstance()) {
-            console.log("Do set player turn: " + name);
             this.sendGameRequest({
                 action: {
                     field: "!setTurn",

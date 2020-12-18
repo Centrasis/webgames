@@ -810,9 +810,7 @@ export abstract class CardGame extends BaseGame {
     }
 
     public setPlayerToStart(name: string) {
-        console.log("Try set player turn: " + name);
         if (this.IsHostInstance()) {
-            console.log("Do set player turn: " + name);
             this.sendGameRequest({
                 action: {
                     field: "!setTurn",
