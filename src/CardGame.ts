@@ -983,16 +983,14 @@ export abstract class CardGame extends BaseGame {
     }
 
     protected OnEndLocalRound() {
-        if (this.localPlayer.GetPhase() != PlayerGamePhase.Spectating) {
-            this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
-            this.InvokeNextPlayerRound();
-        }
+        this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
+        this.InvokeNextPlayerRound();
     }
 
     public InvokeNextPlayerRound() {
-        console.log("Invoke next round");
         this.SetGameState(this.CheckGameState());
         if (this.IsHostInstance()) {
+            console.log("Invoke next round as host");
             this.playerIndexThatHasTurn += this.playDirection;
             if (this.playerIndexThatHasTurn < 0) {
                 this.playerIndexThatHasTurn = this.players.length - 1;
@@ -1003,6 +1001,7 @@ export abstract class CardGame extends BaseGame {
             }
             this.setPlayerToStart(this.players[this.playerIndexThatHasTurn].getName());
         } else {
+            console.log("Invoke next round as client");
             this.sendGameRequest({
                 action: "!nextTurn",
                 invoker: this.localPlayer.getName(),
@@ -1055,6 +1054,7 @@ export abstract class CardGame extends BaseGame {
         if (typeof req.action === "string") {
             if("!nextTurn" == req.action) {
                 if(this.IsHostInstance()) {
+                    console.log("Call next player in turn from host");
                     this.InvokeNextPlayerRound();
                 }   
                 return;
