@@ -496,7 +496,11 @@ class UNO extends CardGame {
         this.GUI.ShowEndRoundBtn(false);
     }
 
-    public StartGame(): void {
+    public onStart() {
+        super.onStart();
+
+        this.bIsSuspended = false;
+
         if (this.IsHostInstance()) {
             this.Deck.Game = this;
             (<UNOCardDeck>this.Deck).revealFirstCard();
@@ -506,26 +510,14 @@ class UNO extends CardGame {
                 p.Game = this;
                 p.drawNumberOfCards((<UNOCardDeck>this.Deck).GetDrawStack(), 7);
             });
-        }
 
-        super.StartGame();
-
-        this.bIsSuspended = false;
-
-        if (this.players.length == 1) {
-            this.InvokeNextPlayerRound();
-        }
-        else {
-            if (this.IsHostInstance()) {
-                this.sendGameRequest({
-                    action: {
-                        field: "!setTurn",
-                        value: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
-                    },
-                    invoker: String(this.GetLocalPlayerID())
-                });
+            if (this.players.length == 1) {
+                this.InvokeNextPlayerRound();
+            } else {
+                this.InvokeNextPlayerRound(this.players[Math.round(Math.random() * (this.players.length - 1))].getName());
             }
         }
+        this.isSetup = true;
     }
 
     public CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene {
@@ -578,6 +570,7 @@ class UNO extends CardGame {
     protected onPlayersRoundBegin(player) {
         super.onPlayersRoundBegin(player);
         this.GUI.PlayerList.SetPlayerActive(player);
+        this.SetGameState(this.CheckGameState());
     }
 
     public onJoined(id: SVEAccount): void {
@@ -621,26 +614,6 @@ class UNO extends CardGame {
                     (<UNOCardDeck>this.Deck).ResolveWish(wishColor);
                 }
                 return;
-            }
-        } else {
-            if (result.action == "!updatePlayer") {
-                if (this.IsHostInstance()) {
-                    this.players.forEach((p) => {
-                        if (p.getName() == result.target.id)
-                        {
-                            console.log("Initial draw card for: " + p.getName());
-                        }
-                    });
-                    this.isSetup = true;
-                }
-
-                if (this.IsRunning())
-                    this.OnSelect(null, null);
-                return;
-            }
-
-            if (result.action == "!drawCard") {
-                this.isSetup = true;
             }
         }
         console.log("Unknown response:" + JSON.stringify(result));

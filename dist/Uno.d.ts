@@ -27,7 +27,7 @@ declare class UNO extends CardGame {
     CheckGameState(): GameState;
     StartLocalPlayersRound(): void;
     OnEndLocalRound(): void;
-    StartGame(): void;
+    onStart(): void;
     CreateScene(engine: BABYLON.Engine, canvas: HTMLCanvasElement): BABYLON.Scene;
     OnForceEndRound(): void;
     Tick(): void;

@@ -522,6 +522,7 @@ export class Player extends SVEAccount {
             }
 
             this.AddCard(card);
+            card.reveal();
         }
     }
 

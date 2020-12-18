@@ -436,8 +436,10 @@ var UNO = /** @class */ (function (_super) {
         _super.prototype.OnEndLocalRound.call(this);
         this.GUI.ShowEndRoundBtn(false);
     };
-    UNO.prototype.StartGame = function () {
+    UNO.prototype.onStart = function () {
         var _this = this;
+        _super.prototype.onStart.call(this);
+        this.bIsSuspended = false;
         if (this.IsHostInstance()) {
             this.Deck.Game = this;
             this.Deck.revealFirstCard();
@@ -446,23 +448,14 @@ var UNO = /** @class */ (function (_super) {
                 p.Game = _this;
                 p.drawNumberOfCards(_this.Deck.GetDrawStack(), 7);
             });
-        }
-        _super.prototype.StartGame.call(this);
-        this.bIsSuspended = false;
-        if (this.players.length == 1) {
-            this.InvokeNextPlayerRound();
-        }
-        else {
-            if (this.IsHostInstance()) {
-                this.sendGameRequest({
-                    action: {
-                        field: "!setTurn",
-                        value: this.players[Math.round(Math.random() * (this.players.length - 1))].GetID(),
-                    },
-                    invoker: String(this.GetLocalPlayerID())
-                });
+            if (this.players.length == 1) {
+                this.InvokeNextPlayerRound();
+            }
+            else {
+                this.InvokeNextPlayerRound(this.players[Math.round(Math.random() * (this.players.length - 1))].getName());
             }
         }
+        this.isSetup = true;
     };
     UNO.prototype.CreateScene = function (engine, canvas) {
         _super.prototype.CreateScene.call(this, engine, canvas);
@@ -503,6 +496,7 @@ var UNO = /** @class */ (function (_super) {
     UNO.prototype.onPlayersRoundBegin = function (player) {
         _super.prototype.onPlayersRoundBegin.call(this, player);
         this.GUI.PlayerList.SetPlayerActive(player);
+        this.SetGameState(this.CheckGameState());
     };
     UNO.prototype.onJoined = function (id) {
         _super.prototype.onJoined.call(this, id);
@@ -539,24 +533,6 @@ var UNO = /** @class */ (function (_super) {
                     this.Deck.ResolveWish(wishColor);
                 }
                 return;
-            }
-        }
-        else {
-            if (result.action == "!updatePlayer") {
-                if (this.IsHostInstance()) {
-                    this.players.forEach(function (p) {
-                        if (p.getName() == result.target.id) {
-                            console.log("Initial draw card for: " + p.getName());
-                        }
-                    });
-                    this.isSetup = true;
-                }
-                if (this.IsRunning())
-                    this.OnSelect(null, null);
-                return;
-            }
-            if (result.action == "!drawCard") {
-                this.isSetup = true;
             }
         }
         console.log("Unknown response:" + JSON.stringify(result));

@@ -453,6 +453,7 @@ var Player = /** @class */ (function (_super) {
                 break;
             }
             this.AddCard(card);
+            card.reveal();
         }
     };
     Player.prototype.update = function () {
