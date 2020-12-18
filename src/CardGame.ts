@@ -993,7 +993,7 @@ export abstract class CardGame extends BaseGame {
             if (this.playerIndexThatHasTurn < 0) {
                 this.playerIndexThatHasTurn = this.players.length - 1;
             } else {
-                if (this.playerIndexThatHasTurn > this.players.length) {
+                if (this.playerIndexThatHasTurn >= this.players.length) {
                     this.playerIndexThatHasTurn = 0;
                 }
             }
