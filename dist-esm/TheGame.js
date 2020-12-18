@@ -252,6 +252,8 @@ var TheGame = /** @class */ (function (_super) {
         _super.prototype.onStart.call(this);
         this.GUI.ShowNextRoundBtn();
         this.GUI.SetEnabledNextRoundBtn(false);
+        if (this.IsRunning())
+            this.OnSelect(null, null);
         if (this.players.length == 1) {
             this.InvokeNextPlayerRound();
         }
@@ -341,48 +343,6 @@ var TheGame = /** @class */ (function (_super) {
             this.EndGame();
         }
     };
-    /*
-    public OnServerResponse(result: any): void {
-        super.OnServerResponse(result);
-
-        if (result.type == "gameState") {
-            let gs: GameState = (result.value == "lost") ? GameState.Lost : GameState.Won;
-            
-            this.GUI.ShowGameState(gs);
-
-            this.EndGame();
-
-            return;
-        }
-
-        if (result.type == "updatePlayer") {
-            if (this.bIsHosting) {
-                this.players.forEach((p) => {
-                    if (p.GetID() == result.player)
-                    {
-                        console.log("Initial draw card for: " + p.GetID());
-                        p.drawCards((<TheGameCardDeck>this.Deck).GetDrawStack());
-                    }
-                });
-            }
-
-            if (this.bIsRunning)
-                this.OnSelect(null, null);
-            return;
-        }
-
-        if (result.type == "nextTurn") {
-            this.GUI.PlayerList.SetPlayerActive(this.players.find(e => e.GetID() == result.player));
-            this.GUI.UpdateCardCounter(this.Deck.GetNumberOfCardsInDeck());
-            if(result.player == this.localPlayer.GetID()) {
-                this.GUI.RememberItsYourTurn();
-            }
-            return;
-        }
-
-        console.log("Unknown response:" + JSON.stringify(result));
-    }
-    */
     TheGame.prototype.OnSelect = function (evt, pickInfo) {
         _super.prototype.OnSelect.call(this, evt, pickInfo);
         if (this.localPlayer == null)

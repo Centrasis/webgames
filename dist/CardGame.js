@@ -839,7 +839,7 @@ var CardGame = /** @class */ (function (_super) {
                 this.playerIndexThatHasTurn = this.players.length - 1;
             }
             else {
-                if (this.playerIndexThatHasTurn > this.players.length) {
+                if (this.playerIndexThatHasTurn >= this.players.length) {
                     this.playerIndexThatHasTurn = 0;
                 }
             }
