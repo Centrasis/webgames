@@ -501,9 +501,7 @@ export class Player extends SVEAccount {
         return ret;
     }
 
-    public drawCards(stack: CardStack): void {
-        this.SetPhase(PlayerGamePhase.Spectating);
-        
+    public drawCards(stack: CardStack): void {       
         while(this.maxCardCount > this.cards.length) {
             let card = stack.DrawCard();
             if (card === null)
@@ -784,12 +782,9 @@ export abstract class CardGame extends BaseGame {
     }
 
     public StartLocalPlayersRound() {
-        if (this.localPlayer.GetPhase() == PlayerGamePhase.Spectating)
-        {
-            this.GUI.RememberItsYourTurn();
-            this.localPlayer.SetPhase(PlayerGamePhase.SelectingCard);
-            this.OnSelect(null, null);
-        }
+        this.GUI.RememberItsYourTurn();
+        this.localPlayer.SetPhase(PlayerGamePhase.SelectingCard);
+        this.OnSelect(null, null);
     }
 
     public SetInitialCardCount(cardsCount: number): void {
@@ -1088,8 +1083,6 @@ export abstract class CardGame extends BaseGame {
                 let pName = req.action.value as string;
                 if (pName == this.localPlayer.getName()) {
                     this.StartLocalPlayersRound();
-                } else {
-                    this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
                 }
                 let p = this.players.find(e => e.getName() == pName);
 
