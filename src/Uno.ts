@@ -503,7 +503,7 @@ class UNO extends CardGame {
 
         if (this.IsHostInstance()) {
             this.Deck.Game = this;
-            (<UNOCardDeck>this.Deck).revealFirstCard();
+            (<UNOCardDeck>this.Deck).revealFirstCard(); 
 
             this.SetInitialCardCount(7);
             this.players.forEach(p => {
