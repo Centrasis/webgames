@@ -437,7 +437,6 @@ var Player = /** @class */ (function (_super) {
         return ret;
     };
     Player.prototype.drawCards = function (stack) {
-        this.SetPhase(PlayerGamePhase.Spectating);
         while (this.maxCardCount > this.cards.length) {
             var card = stack.DrawCard();
             if (card === null) {
@@ -669,11 +668,9 @@ var CardGame = /** @class */ (function (_super) {
         return svebaselib_1.GameState.Undetermined;
     };
     CardGame.prototype.StartLocalPlayersRound = function () {
-        if (this.localPlayer.GetPhase() == PlayerGamePhase.Spectating) {
-            this.GUI.RememberItsYourTurn();
-            this.localPlayer.SetPhase(PlayerGamePhase.SelectingCard);
-            this.OnSelect(null, null);
-        }
+        this.GUI.RememberItsYourTurn();
+        this.localPlayer.SetPhase(PlayerGamePhase.SelectingCard);
+        this.OnSelect(null, null);
     };
     CardGame.prototype.SetInitialCardCount = function (cardsCount) {
         var _this = this;
@@ -925,9 +922,6 @@ var CardGame = /** @class */ (function (_super) {
                 var pName_1 = req.action.value;
                 if (pName_1 == this.localPlayer.getName()) {
                     this.StartLocalPlayersRound();
-                }
-                else {
-                    this.localPlayer.SetPhase(PlayerGamePhase.Spectating);
                 }
                 var p = this.players.find(function (e) { return e.getName() == pName_1; });
                 this.onPlayersRoundBegin(p);
