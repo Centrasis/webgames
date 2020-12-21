@@ -31,7 +31,16 @@ var SVEGame = /** @class */ (function () {
         this.peerOpts = {
             host: "/",
             path: "/peer",
-            secure: true
+            secure: true,
+            config: {
+                iceServers: [
+                    {
+                        urls: "turn:sve.felixlehner.de:3478",
+                        username: "coturn",
+                        credential: "0sYt&X*54Xtv4#F"
+                    }
+                ]
+            }
         };
         this.conOpts = {
             serialization: "json",
