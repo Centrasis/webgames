@@ -26,7 +26,7 @@ export class SVEGame {
         config: {
             iceServers: [
                 {
-                    urls: "turn:sve.felixlehner.de:3478",
+                    urls: "turn:" + location.host + ":3478",
                     username: "coturn",
                     credential: "0sYt&X*54Xtv4#F"
                 }
