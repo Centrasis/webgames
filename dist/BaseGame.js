@@ -12,12 +12,8 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SVEGame = void 0;
-var peerjs_1 = __importDefault(require("peerjs"));
 var svebaselib_1 = require("svebaselib");
 var SVEGame = /** @class */ (function () {
     function SVEGame(info) {
@@ -28,24 +24,6 @@ var SVEGame = /** @class */ (function () {
         this.bIsHost = false;
         this.bIsRunning = false;
         this.gameState = svebaselib_1.GameState.Undetermined;
-        this.peerOpts = {
-            host: "/",
-            path: "/peer",
-            secure: true,
-            config: {
-                iceServers: [
-                    {
-                        urls: "turn:" + location.host + ":3478",
-                        username: "coturn",
-                        credential: "0sYt&X*54Xtv4#F"
-                    }
-                ]
-            }
-        };
-        this.conOpts = {
-            serialization: "json",
-            reliable: false
-        };
         this.OnGameRejected = function (r) { };
         this.OnGameStart = function () { };
         this.OnNewPlayer = function () { };
@@ -95,41 +73,8 @@ var SVEGame = /** @class */ (function () {
         });
     };
     SVEGame.prototype.setupPeerConnection = function (peerID) {
-        var _this = this;
         console.log("Setup client connection..");
         return new Promise(function (resolve, reject) {
-            _this.conOpts.metadata = {
-                client: _this.localUser.getName(),
-                host: _this.host
-            };
-            var conn = _this.socket.connect(peerID, _this.conOpts);
-            var returned = false;
-            conn.on('open', function () {
-                console.log("Connected with game: " + _this.name);
-                returned = true;
-                resolve(conn);
-            });
-            conn.on('data', function (e) {
-                _this.onRequest(e);
-            });
-            conn.on('close', function () {
-                console.log("End game: " + _this.name);
-                _this.onEnd();
-                _this.OnGameRejected(svebaselib_1.GameRejectReason.PlayerLimitExceeded);
-                if (!returned) {
-                    returned = true;
-                    reject(null);
-                }
-            });
-            conn.on('error', function (err) {
-                console.log("Error with game connection: " + JSON.stringify(err));
-                _this.onEnd();
-                _this.OnGameRejected(svebaselib_1.GameRejectReason.GameNotPresent);
-                if (!returned) {
-                    returned = true;
-                    reject(err);
-                }
-            });
         });
     };
     SVEGame.prototype.updateInfos = function () {
@@ -160,7 +105,6 @@ var SVEGame = /** @class */ (function () {
                         _this.maxPlayers = res.maxPlayers;
                         _this.gameState = res.gameState;
                         console.log("Try connect with host: " + _this.hostPeerID);
-                        _this.socket = new peerjs_1.default(_this.peerOpts);
                         _this.bIsHost = false;
                         _this.localUser = localPlayer;
                         var resolved = false;
@@ -368,37 +312,6 @@ var SVEGame = /** @class */ (function () {
             _this.localUser = localPlayer;
             _this.playerList = [];
             var resolved = false;
-            _this.socket = new peerjs_1.default(_this.peerOpts);
-            _this.socket.on('open', function (id) {
-                resolved = true;
-                _this.hostPeerID = id;
-                console.log("Got Peer ID: " + _this.hostPeerID);
-                _this.setupHostPeerConnection().then(function () {
-                    fetch(svebaselib_1.SVESystemInfo.getGameRoot() + '/new', {
-                        method: 'PUT',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(_this.getAsInitializer())
-                    }).then(function (response) {
-                        if (response.status < 400) {
-                            _this.OnConnected(true);
-                            _this.onJoined(_this.localUser);
-                            resolve();
-                        }
-                        else {
-                            _this.OnConnected(false);
-                            reject();
-                        }
-                    }, function (err) { return reject(err); });
-                });
-            });
-            _this.socket.on("error", function (err) {
-                console.log("Connection error (p2p)!");
-                if (!resolved)
-                    reject();
-            });
         });
     };
     SVEGame.getGames = function () {

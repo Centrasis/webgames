@@ -1,4 +1,3 @@
-import Peer from 'peerjs';
 import * as BABYLON from 'babylonjs';
 import { GameRequest, SVEAccount, GameState, GameInfo, GameRejectReason } from 'svebaselib';
 export interface Commandable {
@@ -10,15 +9,13 @@ export declare class SVEGame {
     gameType: string;
     maxPlayers: number;
     hostPeerID: string;
-    protected socket?: Peer;
+    protected socket?: any;
     protected localUser?: SVEAccount;
     protected playerList: SVEAccount[];
-    protected connections: Peer.DataConnection[];
+    protected connections: any[];
     private bIsHost;
     private bIsRunning;
     gameState: GameState;
-    protected peerOpts: Peer.PeerJSOption;
-    protected conOpts: Peer.PeerConnectOption;
     constructor(info: GameInfo);
     OnGameRejected: (reason: GameRejectReason) => void;
     OnGameStart: () => void;
@@ -26,7 +23,7 @@ export declare class SVEGame {
     IsHostInstance(): boolean;
     IsRunning(): boolean;
     protected setupHostPeerConnection(): Promise<void>;
-    protected setupPeerConnection(peerID: string): Promise<Peer.DataConnection>;
+    protected setupPeerConnection(peerID: string): Promise<any>;
     updateInfos(): void;
     join(localPlayer: SVEAccount): Promise<void>;
     onJoined(player: SVEAccount): void;

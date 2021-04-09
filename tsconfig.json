@@ -15,7 +15,6 @@
   },
   "include": [
     "src/**/*",
-    "node_modules/peerjs/dist/peerjs.js"
   ],
   "exclude": [
     "node_modules",

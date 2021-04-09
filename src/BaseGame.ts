@@ -1,4 +1,3 @@
-import Peer from 'peerjs';
 import * as BABYLON from 'babylonjs';
 import { GameRequest, SVEAccount, GameState, GameInfo, GameRejectReason, TargetType, SVESystemInfo, LoginState } from 'svebaselib';
 
@@ -12,32 +11,13 @@ export class SVEGame {
     public gameType: string;
     public maxPlayers: number;
     public hostPeerID: string = "";
-    protected socket?: Peer = undefined;
+    protected socket?: any = undefined;
     protected localUser?: SVEAccount;
     protected playerList: SVEAccount[] = [];
-    protected connections: Peer.DataConnection[] = [];
+    protected connections: any[] = [];
     private bIsHost: boolean = false;
     private bIsRunning: boolean = false;
     public gameState: GameState = GameState.Undetermined;
-    protected peerOpts: Peer.PeerJSOption = {
-        host:"/",
-        path: "/peer",
-        secure: true,
-        config: {
-            iceServers: [
-                {
-                    urls: "turn:" + location.host + ":3478",
-                    username: "coturn",
-                    credential: "0sYt&X*54Xtv4#F"
-                }
-            ]
-        }
-    }
-    protected conOpts: Peer.PeerConnectOption = {
-        serialization: "json",
-        reliable: false
-    }
-
 
     constructor(info: GameInfo) {
         this.host = info.host;
@@ -94,44 +74,9 @@ export class SVEGame {
         });
     }
 
-    protected setupPeerConnection(peerID:string): Promise<Peer.DataConnection> {
+    protected setupPeerConnection(peerID:string): Promise<any> {
         console.log("Setup client connection..");
-        return new Promise<Peer.DataConnection>((resolve, reject) => {
-            this.conOpts.metadata = {
-                client: this.localUser!.getName(),
-                host: this.host
-            };
-            const conn = this.socket!.connect(peerID, this.conOpts);
-            let returned = false;
-            conn.on('open', () => {
-                console.log("Connected with game: " + this.name);
-                returned = true;
-                resolve(conn);
-            });
-    
-            conn.on('data', (e:any) => {
-                this.onRequest(e as GameRequest);
-            });
-    
-            conn.on('close', () => {
-                console.log("End game: " + this.name);
-                this.onEnd();
-                this.OnGameRejected(GameRejectReason.PlayerLimitExceeded);
-                if (!returned) {
-                    returned = true;
-                    reject(null);
-                }
-            });
-    
-            conn.on('error', (err:any) => {
-                console.log("Error with game connection: " + JSON.stringify(err));
-                this.onEnd();
-                this.OnGameRejected(GameRejectReason.GameNotPresent);
-                if (!returned) {
-                    returned = true;
-                    reject(err);
-                }
-            });
+        return new Promise<any>((resolve, reject) => {
         });
     }
 
@@ -163,7 +108,6 @@ export class SVEGame {
                         this.maxPlayers = (res as GameInfo).maxPlayers;
                         this.gameState = (res as GameInfo).gameState;
                         console.log("Try connect with host: " + this.hostPeerID);
-                        this.socket = new Peer(this.peerOpts);
                         this.bIsHost = false;
                         this.localUser = localPlayer;
                         let resolved = false;
@@ -381,38 +325,6 @@ export class SVEGame {
             this.localUser = localPlayer;
             this.playerList = [];
             let resolved = false;
-
-            this.socket = new Peer(this.peerOpts);
-            this.socket.on('open', (id) => {
-                resolved = true;
-                this.hostPeerID = id;
-                console.log("Got Peer ID: " + this.hostPeerID);
-
-                this.setupHostPeerConnection().then(() => {
-                    fetch(SVESystemInfo.getGameRoot() + '/new', {
-                        method: 'PUT',
-                        headers: {
-                            'Accept': 'application/json',
-                            'Content-Type': 'application/json' 
-                        },
-                        body: JSON.stringify(this.getAsInitializer())
-                    }).then(response => {
-                        if(response.status < 400) {
-                            this.OnConnected(true);
-                            this.onJoined(this.localUser!);
-                            resolve();
-                        } else {
-                            this.OnConnected(false);
-                            reject();
-                        }
-                    }, err => reject(err));
-                });
-            });
-            this.socket.on("error", (err) => {
-                console.log("Connection error (p2p)!");
-                if(!resolved)
-                    reject();
-            });
         });
     }
 
