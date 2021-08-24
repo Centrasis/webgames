@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "repository": {
-    "url": "git+https://github.com/ftl999/webgames.git",
+    "url": "git+https://github.com/Centrasis/webgames.git",
     "type": "git"
   },
   "dependencies": {
@@ -16,7 +16,8 @@
     "babylonjs-materials": "^4.1.0",
     "prop-types": "^15.7.2",
     "querystring": "^0.2.0",
-    "svebaselib": "git+https://github.com/ftl999/sveBaseLib.git",
+    "svebaselib": "git+https://github.com/Centrasis/sveBaseLib.git",
+    "svegamesapi": "git+https://github.com/Centrasis/sveGamesAPI.git",
     "typescript": "^3.9.7",
     "ws": "^7.3.1"
   },
@@ -29,9 +30,9 @@
   "author": "ftl999",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/ftl999/sveBaseLib/issues"
+    "url": "https://github.com/Centrasis/sveBaseLib/issues"
   },
-  "homepage": "https://github.com/ftl999/sveBaseLib#readme",
+  "homepage": "https://github.com/Centrasis/sveBaseLib#readme",
   "devDependencies": {
     "awesome-typescript-loader": "^5.2.1",
     "chalk": "^4.1.0",

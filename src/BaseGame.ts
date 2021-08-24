@@ -1,5 +1,6 @@
 import * as BABYLON from 'babylonjs';
-import { GameRequest, SVEAccount, GameState, GameInfo, GameRejectReason, TargetType, SVESystemInfo, LoginState } from 'svebaselib';
+import { SVEAccount, SVESystemInfo, LoginState } from 'svebaselib';
+import {GameRejectReason, SVEGameInfo as GameInfo, GameState, Action as GameRequest, SVEGame as SVEGameBase} from 'svegamesapi';
 
 export interface Commandable {
     executeCommand(cmd: string, req: GameRequest);
@@ -17,15 +18,14 @@ export class SVEGame {
     protected connections: any[] = [];
     private bIsHost: boolean = false;
     private bIsRunning: boolean = false;
-    public gameState: GameState = GameState.Undetermined;
+    public gameState: GameState = GameState.UnReady;
 
     constructor(info: GameInfo) {
-        this.host = info.host;
-        this.hostPeerID = (info.peerID !== undefined) ? info.peerID : "";
+        this.host = info.host.getName();
+        this.hostPeerID = "";
         this.name = info.name;
-        this.gameType = info.gameType;
         this.maxPlayers = info.maxPlayers;
-        this.gameState = info.gameState;
+        //this.gameState = info.gameState;
     }
 
     public OnGameRejected: (reason: GameRejectReason) => void = (r) => {};
@@ -102,7 +102,7 @@ export class SVEGame {
                 }
             }).then(response => {
                 if(response.status < 400) {
-                    response.json().then(res => {
+                    /*response.json().then(res => {
                         this.hostPeerID = (res as GameInfo).peerID!;
                         this.host = (res as GameInfo).host;
                         this.maxPlayers = (res as GameInfo).maxPlayers;
@@ -132,7 +132,7 @@ export class SVEGame {
                             if(!resolved)
                                 reject();
                         })
-                    }, err => reject(err));
+                    }, err => reject(err));*/
                 } else {
                     reject();
                 }
